@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Управление филиалами - Colorist CRM{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 800px; margin: 0 auto; padding: 20px; background: #fff; border-radius: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-bottom: 20px;">
+        <h2 style="margin: 0; color: #2c3e50;">📍 Управление филиалами сети</h2>
+        <a href="/director" style="background: #7f8c8d; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px;">← Назад на панель</a>
+    </div>
+
+    <!-- Форма добавления -->
+    <form action="/director/branch/add" method="POST" style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <input type="text" name="name" required placeholder="Название нового филиала (например: Уфа (Центр))" style="flex: 1; padding: 10px; border: 1px solid #bdc3c7; border-radius: 4px;" />
+        <button type="submit" style="background: #2980b9; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;">Добавить</button>
+    </form>
+
+    <!-- Таблица филиалов -->
+    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+        <thead>
+            <tr style="border-bottom: 2px solid #ecf0f1; background: #f8f9fa;">
+                <th style="padding: 12px 15px;">ID</th>
+                <th style="padding: 12px 15px;">Название филиала</th>
+                <th style="padding: 12px 15px; text-align: right;">Действие</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in branches %}
+            <tr style="border-bottom: 1px solid #ecf0f1;">
+                <td style="padding: 12px 15px; font-weight: bold; color: #7f8c8d;">#{{ b.id }}</td>
+                <td style="padding: 12px 15px; font-weight: bold; color: #2c3e50;">{{ b.name }}</td>
+                <td style="padding: 12px 15px; text-align: right;">
+                    <form action="/director/branch/delete/{{ b.id }}" method="POST" onsubmit="return confirm('Удалить филиал {{ b.name }}?');" style="margin: 0;">
+                        <button type="submit" style="color: #e74c3c; border: none; background: none; cursor: pointer; font-weight: bold;">Удалить</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3" style="padding: 30px; text-align: center; color: #7f8c8d;">Филиалов пока нет.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

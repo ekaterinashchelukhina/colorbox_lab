@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}Заказ #{{ order.id }} (Просмотр) - Colorist CRM{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 900px; margin: 0 auto;">
+    <!-- Шапка -->
+    <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 20px;">
+        <h2 style="margin: 0; color: #2c3e50;">Заказ #{{ order.id }} <span style="font-size: 14px; color: #7f8c8d; font-weight: normal;">(Режим директора)</span></h2>
+        <span style="background: #ecf0f1; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; color: #34495e;">{{ order.status }}</span>
+
+        <a href="/order/{{ order.id }}/print" target="_blank" style="background: #2c3e50; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; margin-left: auto;">🖨 Печать</a>
+        <a href="/director" style="color: #7f8c8d; text-decoration: none; font-weight: bold; margin-left: 15px;">← Назад на панель директора</a>
+    </div>
+
+    <!-- Данные заказа -->
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 300px; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1; box-sizing: border-box;">
+            <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">Данные по подбору</h3>
+            <p style="margin: 8px 0;"><strong>Автомобиль:</strong> {{ order.car }}</p>
+            <p style="margin: 8px 0;"><strong>Деталь:</strong> {{ order.detail }}</p>
+            <p style="margin: 8px 0;"><strong>Тип услуги:</strong> <span style="background: #8e44ad; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">{{ order.service_type }}</span></p>
+            <p style="margin: 12px 0 8px 0;"><strong>Код краски:</strong> <span style="font-size: 18px; color: #e74c3c; font-weight: bold;">{{ order.paint_code }}</span></p>
+            <p style="margin: 8px 0;"><strong>Требуемый объем:</strong> {{ order.target_volume }} л</p>
+            {% if order.actual_volume %}
+            <p style="margin: 8px 0; color: #27ae60;"><strong>Фактический объем:</strong> {{ order.actual_volume }} г</p>
+            {% endif %}
+            <p style="margin: 8px 0;"><strong>Количество переделок (брак):</strong> <span style="color: #c0392b; font-weight: bold;">{{ order.rework_count }}</span></p>
+        </div>
+
+        <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box;">
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1;">
+                <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">Клиент и сроки</h3>
+                <p style="margin: 8px 0;"><strong>Имя (СТО):</strong> {{ order.client.name }}</p>
+                <p style="margin: 8px 0;"><strong>Филиал:</strong> {{ order.branch.name if order.branch else "—" }}</p>
+                <p style="margin: 8px 0;"><strong>Дедлайн:</strong>
+                    {% if order.deadline_at %}
+                        {{ order.deadline_at.strftime('%d.%m.%Y') }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- Блок Финансы (Только просмотр для директора) -->
+            <div style="background: #e8f6f3; padding: 20px; border-radius: 8px; border: 1px solid #1abc9c;">
+                <h3 style="margin-top: 0; color: #16a085; font-size: 16px; border-bottom: 1px solid #a3e4d7; padding-bottom: 8px;">Финансы и Оплата</h3>
+                <p style="margin: 10px 0; font-size: 16px;"><strong>Итоговая стоимость:</strong> <span style="font-size: 20px; color: #2c3e50; font-weight: bold;">{{ order.price }} ₽</span></p>
+                <p style="margin: 10px 0;"><strong>Статус оплаты:</strong> 
+                    {% if order.is_paid %}
+                        <span style="color: #27ae60; font-weight: bold;">🟢 Заказ оплачен</span>
+                    {% else %}
+                        <span style="color: #e74c3c; font-weight: bold;">🔴 Не оплачено</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Блок комментариев -->
+    <div style="margin-top: 30px; background: #fdfefe; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1;">
+        <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">Примечания к заказу</h3>
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px;">
+            <div style="flex: 1; min-width: 280px;">
+                <label style="font-size: 13px; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 5px;">Комментарий колориста:</label>
+                <div style="padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; color: #2c3e50; min-height: 50px; font-size: 14px;">
+                    {{ order.colorist_comment if order.colorist_comment else "Колорист ничего не написал." }}
+                </div>
+            </div>
+            <div style="flex: 1; min-width: 280px;">
+                <label style="font-size: 13px; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 5px;">Комментарий менеджера:</label>
+                <div style="padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; color: #2c3e50; min-height: 50px; font-size: 14px;">
+                    {{ order.manager_comment if order.manager_comment else "Менеджер ничего не написал." }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Блок фотографий (Только просмотр, без форм загрузки) -->
+    <div style="margin-top: 30px;">
+        <h3 style="color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px;">Фотоконтроль заказа</h3>
+
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+
+            <!-- 1. Деталь ДО -->
+            <div style="flex: 1; min-width: 250px; background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ecf0f1; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #34495e; font-size: 14px;">1. Деталь ДО работы</h4>
+                {% if order.photo_detail %}
+                    <a href="{{ order.photo_detail }}" target="_blank">
+                        <img src="{{ order.photo_detail }}" alt="Деталь до" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; background: white; border: 1px solid #ddd;" />
+                    </a>
+                {% else %}
+                    <div style="height: 180px; background: #ecf0f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #95a5a6; border: 2px dashed #bdc3c7; font-size: 13px;">Фото не загружено</div>
+                {% endif %}
+            </div>
+
+            <!-- 2. Краска на весах -->
+            <div style="flex: 1; min-width: 250px; background: #fff8e1; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ffe082; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #d35400; font-size: 14px;">2. Краска на весах</h4>
+                {% if order.photo_scales %}
+                    <a href="{{ order.photo_scales }}" target="_blank">
+                        <img src="{{ order.photo_scales }}" alt="Весы" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; background: white; border: 1px solid #ddd;" />
+                    </a>
+                {% else %}
+                    <div style="height: 180px; background: #fff3e0; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #e67e22; border: 2px dashed #ffb74d; font-size: 13px;">Фото не загружено</div>
+                {% endif %}
+            </div>
+
+            <!-- 3. Деталь ПОСЛЕ -->
+            <div style="flex: 1; min-width: 250px; background: #e8f8f5; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #a3e4d7; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #16a085; font-size: 14px;">3. Деталь ПОСЛЕ работы</h4>
+                {% if order.photo_after %}
+                    <a href="{{ order.photo_after }}" target="_blank">
+                        <img src="{{ order.photo_after }}" alt="Деталь после" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; background: white; border: 1px solid #ddd;" />
+                    </a>
+                {% else %}
+                    <div style="height: 180px; background: #e0f2f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #1abc9c; border: 2px dashed #80cbc4; font-size: 13px;">Фото не загружено</div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

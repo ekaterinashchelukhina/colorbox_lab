@@ -1,193 +1,115 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Заказ #{{ order.id }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; padding-bottom: 40px; }
+        .upload-zone { border: 2px dashed #bdc3c7; background-color: #ecf0f1; text-align: center; cursor: pointer; transition: 0.2s; }
+        .upload-zone:active { background-color: #dfe6e9; }
+        .photo-preview { max-width: 100%; border-radius: 8px; margin-top: 10px; border: 1px solid #dee2e6; }
+    </style>
+</head>
+<body>
 
-{% block title %}Лаборатория - Заказ #{{ order.id }}{% endblock %}
+<div class="container-fluid px-3 py-3" style="max-width: 600px; margin: auto;">
 
-{% block content %}
-<div class="card" style="max-width: 900px; margin: 0 auto; border-top: 4px solid #e67e22;">
-    <!-- Шапка -->
-    <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 20px;">
-        <h2 style="margin: 0; color: #e67e22;">Подбор #{{ order.id }}</h2>
-        <span style="background: #ecf0f1; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; color: #34495e;">{{ order.status }}</span>
-
-        <form action="/order/{{ order.id }}/status" method="post" style="display: flex; gap: 10px; margin-left: 20px; align-items: center; flex-wrap: wrap;">
-            <select name="new_status" required="required" style="padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; background: white;">
-                <option value="{{ order.status }}" selected="selected" hidden="hidden">{{ order.status }}</option>
-                <option value="В очереди">В очереди</option>
-                <option value="В работе">В работе</option>
-                <option value="Готово">Готово</option>
-                <option value="Переделка">Брак (Переделка)</option>
-            </select>
-
-            <div style="display: flex; align-items: center; gap: 5px; background: #ecf0f1; padding: 4px 8px; border-radius: 4px;">
-                <label style="font-size: 12px; font-weight: bold; color: #2c3e50;">Факт (г):</label>
-                <input type="number" step="0.1" name="actual_volume" placeholder="0.0" style="width: 70px; padding: 4px; border: 1px solid #bdc3c7; border-radius: 4px; font-size: 13px;" />
-            </div>
-
-            <button type="submit" style="background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Сохранить</button>
-        </form>
-
-        <a href="/order/{{ order.id }}/print" target="_blank" style="background: #e67e22; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; margin-left: auto;">🖨 Печать</a>
-        <a href="/colorist" style="color: #7f8c8d; text-decoration: none; font-weight: bold; margin-left: 15px;">← Вернуться в очередь</a>
+    <!-- Навигация -->
+    <div class="d-flex align-items-center mb-4 border-bottom pb-3">
+        <a href="/colorist" class="btn btn-outline-secondary btn-sm me-3 fw-bold">← В очередь</a>
+        <h2 class="h5 mb-0 fw-bold">Заказ #{{ order.id }}</h2>
     </div>
 
-    <!-- Технические данные заказа -->
-    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; display: flex; flex-wrap: wrap; justify-content: space-between; border: 1px solid #ecf0f1;">
-        <div style="flex: 1; min-width: 250px;">
-            <p style="margin: 5px 0;"><strong>Автомобиль:</strong> {{ order.car }}</p>
-            <p style="margin: 5px 0;"><strong>Деталь:</strong> {{ order.detail }}</p>
-            <p style="margin: 5px 0; margin-top: 10px;"><strong>Тип услуги:</strong> <span style="background: #8e44ad; color: white; padding: 2px 8px; border-radius: 4px; font-size: 13px;">{{ order.service_type }}</span></p>
-
-            {% if order.is_express %}
-                <p style="margin: 5px 0; margin-top: 10px;"><span style="background: #e74c3c; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">⚡ ЭКСПРЕСС</span></p>
-            {% endif %}
-            {% if order.rework_count > 0 %}
-                <p style="margin: 5px 0; margin-top: 5px;"><span style="background: #c0392b; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">↻ Переделок: {{ order.rework_count }}</span></p>
-            {% endif %}
+    <!-- Информация о заказе -->
+    <div class="card shadow-sm border-0 rounded-4 p-3 mb-4">
+        <div class="d-flex justify-content-between mb-2">
+            <span class="badge bg-primary fs-6">{{ order.service_type }}</span>
+            <span class="fw-bold text-dark fs-5 text-danger">{{ order.paint_code }}</span>
         </div>
-        <div style="flex: 1; min-width: 250px; border-left: 2px solid #ecf0f1; padding-left: 20px;">
-            <p style="margin: 5px 0; font-size: 14px;"><strong>Код краски:</strong></p>
-            <p style="margin: 0; font-size: 28px; color: #e74c3c; font-weight: bold;">{{ order.paint_code }}</p>
-            <p style="margin: 10px 0 0 0; font-size: 14px;"><strong>Целевой объем:</strong> <span style="font-size: 18px; font-weight: bold;">{{ order.target_volume }} л.</span></p>
-
-            {% if order.actual_volume %}
-                <p style="margin: 5px 0 0 0; font-size: 14px; color: #27ae60;"><strong>Налито по факту:</strong> <span style="font-size: 16px; font-weight: bold;">{{ order.actual_volume }} г.</span></p>
-            {% endif %}
-        </div>
+        <hr class="opacity-25 my-2">
+        <p class="mb-1 small"><strong>Автомобиль:</strong> {{ order.car }}</p>
+        <p class="mb-1 small"><strong>Деталь:</strong> {{ order.detail }}</p>
+        <p class="mb-0 small text-primary fw-bold"><strong>Целевой объем:</strong> {{ order.target_volume }} л.</p>
     </div>
 
-    <!-- Блок фотографий (Динамический) -->
-    <div style="margin-top: 30px;">
-        <h3 style="color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px;">
-            Фотоконтроль
-            {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}
-                (3 этапа)
+    <!-- Фотоконтроль (отдельные формы для мгновенной загрузки) -->
+    <h3 class="h6 text-secondary text-uppercase fw-bold mb-3">Фотоконтроль (по ТЗ)</h3>
+
+    <div class="d-flex flex-column gap-3 mb-4">
+        <!-- Фото Весов -->
+        <div class="card shadow-sm border-0 rounded-4 p-3">
+            <span class="fw-bold mb-2">1. Краска на весах</span>
+            {% if order.photo_scales %}
+                <img src="{{ order.photo_scales }}" class="photo-preview mb-2">
+                <span class="text-success small fw-bold">✅ Загружено</span>
             {% else %}
-                (Только весы)
-            {% endif %}
-        </h3>
-
-        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
-
-            {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}
-            <!-- 1. Деталь ДО -->
-            <div style="flex: 1; min-width: 250px; background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ecf0f1; box-sizing: border-box;">
-                <h4 style="margin-top: 0; color: #34495e; font-size: 14px;">1. Деталь ДО работы</h4>
-                {% if order.photo_detail %}
-                    <img src="{{ order.photo_detail }}" alt="Деталь до" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; background: white; border: 1px solid #ddd;" />
-                {% else %}
-                    <div style="height: 180px; background: #ecf0f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #95a5a6; margin-bottom: 10px; border: 2px dashed #bdc3c7; font-size: 13px;">Нет фото от менеджера</div>
-                {% endif %}
-                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" style="display: flex; gap: 5px; justify-content: center;">
-                    <input type="hidden" name="photo_type" value="detail" />
-                    <input type="file" name="file" accept="image/*" capture="environment" required="required" style="font-size: 11px; max-width: 160px;" />
-                    <button type="submit" style="background: #95a5a6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Загрузить</button>
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="photo_type" value="scales">
+                    <label class="d-block upload-zone p-2 rounded-3 mb-2">
+                        <span class="d-block small text-dark fw-bold py-2">📸 Сделать фото весов</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" required style="display: none;" onchange="this.form.submit()">
+                    </label>
                 </form>
-            </div>
             {% endif %}
+        </div>
 
-            <!-- 2. Краска на весах -->
-            <div style="flex: 1; min-width: 250px; background: #fff8e1; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ffe082; box-sizing: border-box;">
-                <h4 style="margin-top: 0; color: #d35400; font-size: 14px;">
-                    {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}2. {% endif %}Краска на весах
-                </h4>
-                {% if order.photo_scales %}
-                    <img src="{{ order.photo_scales }}" alt="Весы" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; background: white; border: 1px solid #ddd;" />
-                {% else %}
-                    <div style="height: 180px; background: #fff3e0; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #e67e22; margin-bottom: 10px; border: 2px dashed #ffb74d; font-size: 13px;">Обязательно при сдаче</div>
-                {% endif %}
-                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" style="display: flex; gap: 5px; justify-content: center;">
-                    <input type="hidden" name="photo_type" value="scales" />
-                    <input type="file" name="file" accept="image/*" capture="environment" required="required" style="font-size: 11px; max-width: 160px;" />
-                    <button type="submit" style="background: #e67e22; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Загрузить</button>
+        <!-- Фото Лючка/Детали (после) -->
+        {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}
+        <div class="card shadow-sm border-0 rounded-4 p-3">
+            <span class="fw-bold mb-2">2. Тест-напыл (Лючок)</span>
+            {% if order.photo_after %}
+                <img src="{{ order.photo_after }}" class="photo-preview mb-2">
+                <span class="text-success small fw-bold">✅ Загружено</span>
+            {% else %}
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="photo_type" value="after">
+                    <label class="d-block upload-zone p-2 rounded-3 mb-2">
+                        <span class="d-block small text-dark fw-bold py-2">📸 Сделать фото напыла</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" required style="display: none;" onchange="this.form.submit()">
+                    </label>
                 </form>
-            </div>
-
-            {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}
-            <!-- 3. Деталь ПОСЛЕ -->
-            <div style="flex: 1; min-width: 250px; background: #e8f8f5; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #a3e4d7; box-sizing: border-box;">
-                <h4 style="margin-top: 0; color: #16a085; font-size: 14px;">3. Деталь ПОСЛЕ работы</h4>
-                {% if order.photo_after %}
-                    <img src="{{ order.photo_after }}" alt="Деталь после" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; background: white; border: 1px solid #ddd;" />
-                {% else %}
-                    <div style="height: 180px; background: #e0f2f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #1abc9c; margin-bottom: 10px; border: 2px dashed #80cbc4; font-size: 13px;">Обязательно при сдаче</div>
-                {% endif %}
-                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" style="display: flex; gap: 5px; justify-content: center;">
-                    <input type="hidden" name="photo_type" value="after" />
-                    <input type="file" name="file" accept="image/*" capture="environment" required="required" style="font-size: 11px; max-width: 160px;" />
-                    <button type="submit" style="background: #1abc9c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Загрузить</button>
-                </form>
-            </div>
             {% endif %}
+        </div>
+        {% endif %}
+    </div>
 
+    <!-- Сдача работы -->
+    <h3 class="h6 text-secondary text-uppercase fw-bold mb-3">Сдача работы</h3>
+    <div class="card shadow-sm border-0 rounded-4 p-4 bg-light border border-success">
+        <form action="/order/{{ order.id }}/status" method="post">
+            <input type="hidden" name="new_status" value="Готово">
+
+            <label class="fw-bold text-dark mb-2">Фактический объем (граммы):</label>
+            <input type="number" step="0.1" name="actual_volume" class="form-control form-control-lg mb-3" placeholder="Например: 550" required>
+
+            <button type="submit" class="btn btn-success w-100 fw-bold py-3 rounded-3 fs-5">
+                Сдать заказ (Готово)
+            </button>
+        </form>
+    </div>
+
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 p-3 mb-4">
+    <h5 class="fw-bold mb-3">Примечания к заказу</h5>
+
+    <!-- Колорист видит комментарий менеджера -->
+    <div class="mb-3">
+        <label class="form-label text-muted small fw-bold">Комментарий менеджера:</label>
+        <div class="p-2 bg-light rounded-3 text-dark">
+            {{ order.manager_comment if order.manager_comment else "Менеджер не оставил комментариев." }}
         </div>
     </div>
 
-    <!-- Рецепт -->
-    <div style="margin-top: 30px;">
-        <h3 style="color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px;">Рецепт краски (компоненты)</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px;">
-            <thead>
-                <tr style="background: #2c3e50; color: white;">
-                    <th style="padding: 10px; text-align: left;">Категория</th>
-                    <th style="padding: 10px; text-align: left;">Тонер / Пигмент</th>
-                    <th style="padding: 10px; text-align: right;">Масса (г)</th>
-                    <th style="padding: 10px; text-align: center; width: 80px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in order.recipe_items %}
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 10px;">{{ item.category }}</td>
-                    <td style="padding: 10px;"><strong>{{ item.toner_name }}</strong></td>
-                    <td style="padding: 10px; text-align: right;">{{ item.weight }} г</td>
-                    <td style="padding: 10px; text-align: center;">
-                        <form action="/order/{{ order.id }}/recipe/{{ item.id }}/delete" method="post" style="margin: 0;">
-                            <button type="submit" style="background: #e74c3c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">✕</button>
-                        </form>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" style="text-align: center; padding: 20px; color: #7f8c8d;">Рецепт пока пуст</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-
-            {% if order.recipe_items %}
-            <tfoot style="background: #ecf0f1; font-weight: bold;">
-                <tr>
-                    <td colspan="2" style="padding: 10px; text-align: right;">Итого налито:</td>
-                    <td style="padding: 10px; text-align: right; color: #2c3e50;">
-                        {{ order.recipe_items | map(attribute='weight') | sum | round(1) }} г
-                    </td>
-                    <td></td>
-                </tr>
-            </tfoot>
-            {% endif %}
-        </table>
-
-        <form action="/order/{{ order.id }}/recipe" method="post" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px; align-items: flex-end;">
-            <div style="flex: 1; min-width: 150px;">
-                <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Категория:</label>
-                <select name="category" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ccc; background: white;">
-                    <option value="Металлик ETY">Металлик ETY</option>
-                    <option value="Перламутр">Перламутр</option>
-                    <option value="Солид / База">Солид / База</option>
-                    <option value="Ксираллик">Ксираллик</option>
-                </select>
-            </div>
-            <div style="flex: 1; min-width: 150px;">
-                <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Тонер / Пигмент:</label>
-                <input type="text" name="toner_name" required="required" placeholder="Например: ETY-43" style="width: 100%; padding: 7px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box;" />
-            </div>
-            <div style="width: 120px;">
-                <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px;">Масса (г):</label>
-                <input type="number" step="0.1" name="weight" required="required" placeholder="0.0" style="width: 100%; padding: 7px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box;" />
-            </div>
-            <div>
-                <button type="submit" style="background: #27ae60; color: white; border: none; padding: 9px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; height: 35px;">+ Добавить</button>
-            </div>
-        </form>
-    </div>
+    <!-- Колорист пишет свой комментарий -->
+    <form action="/order/{{ order.id }}/comment" method="post">
+        <input type="hidden" name="comment_type" value="colorist">
+        <label class="form-label small fw-bold">Ваш комментарий (для менеджера):</label>
+        <textarea name="comment_text" class="form-control mb-2" rows="2" placeholder="Например: Добавлен лишний грамм рапида...">{{ order.colorist_comment or '' }}</textarea>
+        <button type="submit" class="btn btn-sm btn-primary fw-bold">Сохранить заметку</button>
+    </form>
 </div>
-{% endblock %}
+</body>
+</html>

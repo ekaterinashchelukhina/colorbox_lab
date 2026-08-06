@@ -14,7 +14,7 @@
                 <option value="{{ order.status }}" selected="selected" hidden="hidden">{{ order.status }}</option>
                 <option value="В очереди">В очереди</option>
                 <option value="В работе">В работе</option>
-                <option value="Готово">Готово</option>
+                <option value="Ожидает выдачи">Ожидает выдачи</option>
                 <option value="Выдано">Выдано</option>
             </select>
             <button type="submit" style="background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Изменить</button>
@@ -33,6 +33,9 @@
             <p style="margin: 8px 0;"><strong>Тип услуги:</strong> <span style="background: #8e44ad; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">{{ order.service_type }}</span></p>
             <p style="margin: 12px 0 8px 0;"><strong>Код краски:</strong> <span style="font-size: 18px; color: #e74c3c; font-weight: bold;">{{ order.paint_code }}</span></p>
             <p style="margin: 8px 0;"><strong>Требуемый объем:</strong> {{ order.target_volume }} л</p>
+            {% if order.actual_volume %}
+            <p style="margin: 8px 0; color: #27ae60;"><strong>Фактический объем:</strong> {{ order.actual_volume }} г</p>
+            {% endif %}
         </div>
 
         <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box;">
@@ -63,6 +66,31 @@
                     </div>
 
                     <button type="submit" style="background: #1abc9c; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%;">Сохранить расчет</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Блок комментариев и примечаний менеджера/колориста -->
+    <div style="margin-top: 30px; background: #fdfefe; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1;">
+        <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">Примечания к заказу</h3>
+
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px;">
+            <!-- Менеджер видит комментарий колориста -->
+            <div style="flex: 1; min-width: 280px;">
+                <label style="font-size: 13px; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 5px;">Комментарий колориста:</label>
+                <div style="padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; color: #2c3e50; min-height: 50px; font-size: 14px;">
+                    {{ order.colorist_comment if order.colorist_comment else "Колорист еще ничего не написал." }}
+                </div>
+            </div>
+
+            <!-- Менеджер пишет/редактирует свой комментарий -->
+            <div style="flex: 1; min-width: 280px;">
+                <form action="/order/{{ order.id }}/comment" method="post" style="display: flex; flex-direction: column; height: 100%;">
+                    <input type="hidden" name="comment_type" value="manager">
+                    <label style="font-size: 13px; font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px;">Ваш комментарий (для колориста):</label>
+                    <textarea name="comment_text" rows="3" placeholder="Например: Клиент просил сделать чуть темнее образца..." style="padding: 8px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; font-size: 14px; margin-bottom: 10px; resize: vertical;">{{ order.manager_comment or '' }}</textarea>
+                    <button type="submit" style="background: #34495e; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; align-self: flex-start;">Сохранить комментарий</button>
                 </form>
             </div>
         </div>

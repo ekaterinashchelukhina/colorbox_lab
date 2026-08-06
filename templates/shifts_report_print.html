@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Отчет по сменам колористов</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; padding: 20px; }
+        h2 { text-align: center; color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #bdc3c7; padding: 10px; text-align: left; font-size: 14px; vertical-align: top; }
+        th { background: #f4f6f9; color: #2c3e50; }
+        .photo-container { display: flex; gap: 4px; margin-top: 5px; flex-wrap: wrap; }
+        .photo-thumb { width: 35px; height: 35px; object-fit: cover; border-radius: 3px; border: 1px solid #bdc3c7; }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+
+    <div class="no-print" style="margin-bottom: 20px; text-align: right;">
+        <button onclick="window.print()" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">🖨 Сохранить в PDF / Печать</button>
+    </div>
+
+    <h2>Отчет по рабочим сменам колористов</h2>
+    <p>Дата формирования: <span id="gen_date"></span></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Колорист</th>
+                <th>Филиал</th>
+                <th>Начало смены / Фото старта</th>
+                <th>Окончание смены / Фото конца</th>
+                <th>Отработано часов</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for shift in shifts %}
+            <tr>
+                <td><strong>{{ shift.user.username }}</strong></td>
+                <td>{{ shift.branch.name if shift.branch else "—" }}</td>
+                <td>
+                    {{ shift.start_time.strftime('%d.%m.%Y %H:%M') }}
+                    {% if shift.start_photos %}
+                        <div class="photo-container">
+                            {% for p in shift.start_photos.split(',') %}
+                                {% if p.strip() %}
+                                <a href="{{ p.strip() }}" target="_blank" title="Открыть фото старта">
+                                    <img src="{{ p.strip() }}" class="photo-thumb" alt="Старт" />
+                                </a>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if shift.end_time %}
+                        {{ shift.end_time.strftime('%d.%m.%Y %H:%M') }}
+                        {% if shift.end_photos %}
+                            <div class="photo-container">
+                                {% for p in shift.end_photos.split(',') %}
+                                    {% if p.strip() %}
+                                    <a href="{{ p.strip() }}" target="_blank" title="Открыть фото конца">
+                                        <img src="{{ p.strip() }}" class="photo-thumb" alt="Конец" />
+                                    </a>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if shift.end_time %}
+                        <strong>{{ "%.1f" | format((shift.end_time - shift.start_time).total_seconds() / 3600) }} ч.</strong>
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center; color: #7f8c8d; padding: 20px;">Завершенных смен за выбранный период не найдено.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <script>
+        document.getElementById('gen_date').innerText = new Date().toLocaleDateString();
+    </script>
+</body>
+</html>

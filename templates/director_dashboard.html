@@ -5,8 +5,19 @@
 {% block content %}
 <div style="display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 1200px; margin: 0 auto;">
 
+    <!-- Блок уведомлений -->
+    {% if request.query_params.get('success') == 'user' %}
+        <div style="background: #e8f8f5; border-left: 5px solid #27ae60; color: #27ae60; padding: 12px 20px; border-radius: 4px; font-weight: bold; font-size: 14px;">
+            ✅ Сотрудник успешно зарегистрирован и привязан к филиалу!
+        </div>
+    {% elif request.query_params.get('success') == 'branch' %}
+        <div style="background: #e8f8f5; border-left: 5px solid #27ae60; color: #27ae60; padding: 12px 20px; border-radius: 4px; font-weight: bold; font-size: 14px;">
+            ✅ Новый филиал успешно создан!
+        </div>
+    {% endif %}
+
     <!-- Шапка -->
-    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #ecf0f1;">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #ecf0f1; flex-wrap: wrap; gap: 10px;">
         <h2 style="color: #8e44ad; margin: 0; font-size: 24px;">
             {% if current_branch %}
                 Сводка: {{ current_branch.name }}
@@ -14,9 +25,26 @@
                 Сводка по сети лабораторий
             {% endif %}
         </h2>
-        <button style="background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(39, 174, 96, 0.2);">
-            ⬇ Экспорт в Excel
-        </button>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="/director/branches" style="background: #2980b9; color: white; padding: 10px 15px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 14px;">
+                📍 Управление филиалами
+            </a>
+            <a href="/director/users" style="background: #8e44ad; color: white; padding: 10px 15px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 14px;">
+                👤 Управление сотрудниками
+            </a>
+            {% if current_branch %}
+                <a href="/director/shifts/print?branch_id={{ current_branch.id }}" target="_blank" style="background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; text-decoration: none; font-size: 14px; box-shadow: 0 2px 4px rgba(231, 76, 60, 0.2);">
+                    📄 Отчет по сменам (PDF)
+                </a>
+            {% else %}
+                <span title="Выберите конкретный филиал для формирования отчета" style="background: #bdc3c7; color: white; padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: not-allowed; display: inline-block; opacity: 0.7;">
+                    📄 Отчет по сменам (PDF)
+                </span>
+            {% endif %}
+            <button style="background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(39, 174, 96, 0.2);">
+                ⬇ Экспорт в Excel
+            </button>
+        </div>
     </div>
 
     <!-- Фильтр по филиалам -->
@@ -59,8 +87,68 @@
         </div>
     </div>
 
+    <!-- БЛОК 2: Мониторинг активных смен с фотофиксацией -->
+    <div class="card" style="padding: 20px; background: #fff; border-radius: 8px; border: 1px solid #ecf0f1;">
+        <h3 style="margin-top: 0; color: #2c3e50; font-size: 18px; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px;">
+            ⏱ Колористы на смене и фотофиксация рабочих мест
+        </h3>
+
+        <div style="overflow-x: auto; margin-top: 15px;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #ecf0f1; background: #f8f9fa;">
+                        <th style="padding: 12px 15px; color: #2c3e50;">Колорист</th>
+                        <th style="padding: 12px 15px; color: #2c3e50;">Филиал</th>
+                        <th style="padding: 12px 15px; color: #2c3e50;">Время начала смены</th>
+                        <th style="padding: 12px 15px; color: #2c3e50;">Фотофиксация (старт)</th>
+                        <th style="padding: 12px 15px; color: #2c3e50; text-align: right;">Статус</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for shift in shifts %}
+                    <tr style="border-bottom: 1px solid #ecf0f1;">
+                        <td style="padding: 12px 15px; font-weight: bold; color: #34495e;">{{ shift.user.username }}</td>
+                        <td style="padding: 12px 15px;">{{ shift.branch.name if shift.branch else "—" }}</td>
+                        <td style="padding: 12px 15px;">{{ shift.start_time.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td style="padding: 12px 15px;">
+                            {% if shift.start_photos %}
+                                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                    {% set photos = shift.start_photos.split(',') %}
+                                    {% for p in photos %}
+                                        {% if p.strip() %}
+                                        <a href="{{ p.strip() }}" target="_blank" title="Открыть фото в полном размере">
+                                            <img src="{{ p.strip() }}" alt="Фото смены" style="width: 45px; height: 45px; object-fit: cover; border-radius: 4px; border: 1px solid #bdc3c7;" />
+                                        </a>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span style="color: #95a5a6; font-size: 12px;">Нет фото</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px 15px; text-align: right;">
+                            <span style="background: #e8f8f5; color: #27ae60; padding: 4px 10px; border-radius: 4px; font-weight: bold;">
+                                🔴 Активна сейчас
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="padding: 30px; text-align: center; color: #7f8c8d; font-size: 14px;">
+                            В данный момент ни один колорист не вышел на смену.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <!-- Таблица всех заказов -->
     <div class="card" style="overflow-x: auto; width: 100%; box-sizing: border-box; margin-top: 10px;">
+        <h3 style="margin-top: 0; color: #2c3e50; font-size: 18px; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-bottom: 15px;">
+            📦 Список заказов по сети
+        </h3>
         <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
             <thead>
                 <tr style="border-bottom: 2px solid #ecf0f1; background: #f8f9fa;">

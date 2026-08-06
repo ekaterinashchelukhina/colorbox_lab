@@ -1,55 +1,125 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Рабочее место Колориста</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f6f9; padding-bottom: 30px; }
+        .upload-zone { border: 2px dashed #bdc3c7; background-color: #ecf0f1; transition: all 0.2s; }
+        .upload-zone:active { background-color: #dfe6e9; }
+    </style>
+</head>
+<body>
 
-{% block title %}Очередь Лаборатории - Colorist CRM{% endblock %}
+<div class="container-fluid px-3 py-3" style="max-width: 600px; margin: auto;">
 
-{% block content %}
-<!-- Железобетонный каркас, который заставит элементы идти сверху вниз -->
-<div style="display: flex; flex-direction: column; gap: 25px; width: 100%; max-width: 1200px;">
-
-    <!-- Шапка -->
-    <div style="padding-bottom: 15px; border-bottom: 2px solid #ecf0f1;">
-        <h2 style="color: #e67e22; margin: 0; font-size: 24px;">Очередь лаборатории</h2>
+    <!-- Шапка колориста -->
+    <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-2">
+        <h2 class="h5 mb-0 text-dark fw-bold">Пульт колориста</h2>
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-secondary" style="font-size: 13px;">{{ username }}</span>
+            <a href="/logout" class="text-danger fw-bold text-decoration-none" style="font-size: 14px;">Выйти</a>
+        </div>
     </div>
 
-    <!-- Контейнер со списком заказов -->
-    <div style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
+    {% if not active_shift %}
+    <!-- ЭКРАН ЗАКРЫТОЙ СМЕНЫ -->
+    <div class="card shadow-sm border-0 p-4 text-center mb-4 rounded-4">
+        <h3 class="text-danger h5 mb-2 fw-bold">Смена не начата</h3>
+        <p class="text-muted small mb-4">Для доступа к очереди заказов зафиксируйте порядок на рабочем месте (3-4 фото).</p>
+
+        <form action="/shift/start" method="post" enctype="multipart/form-data">
+            <label class="d-block upload-zone p-3 rounded-4 mb-3" style="cursor: pointer;">
+                <span class="fw-bold text-dark d-block mb-1" style="font-size: 16px;">📸 Сделать фотографии</span>
+                <input type="file" name="photos" accept="image/*" capture="environment" multiple required style="display: none;" id="start_photos">
+            </label>
+            <p id="file_count_start" class="text-success fw-bold small mb-3"></p>
+            <button type="submit" class="btn btn-success w-100 fw-bold py-3 rounded-4" style="font-size: 16px;">Начать смену</button>
+        </form>
+    </div>
+
+    {% else %}
+    <!-- ЭКРАН АКТИВНОЙ СМЕНЫ -->
+    <div class="alert alert-success border-0 border-start border-5 border-success mb-4 p-3 shadow-sm rounded-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-bold">✅ Смена активна</span>
+            <!-- Скрипт переводит серверное UTC время в локальное время телефона -->
+            <span class="small text-dark fw-bold" id="local_start_time"></span>
+            <script>
+                const utcDate = new Date("{{ active_shift.start_time.strftime('%Y-%m-%dT%H:%M:%S') }}Z");
+                document.getElementById('local_start_time').innerText = "Старт: " + utcDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            </script>
+        </div>
+    </div>
+
+    <!-- Очередь заказов -->
+    <h3 class="h6 text-secondary text-uppercase fw-bold mb-3">Очередь заказов ({{ orders|length }})</h3>
+
+    <div class="d-flex flex-column gap-3 mb-5">
         {% for order in orders %}
-
-        <!-- Карточка заказа -->
-        <div class="card" style="border-left: 5px solid {% if order.is_express or order.rework_count > 0 %}#e74c3c{% else %}#3498db{% endif %}; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; box-sizing: border-box;">
-
-            <div style="flex: 2;">
-                <h3 style="margin: 0 0 5px 0; color: #2c3e50;">#{{ order.id }} - {{ order.car }}</h3>
-                <p style="margin: 0; color: #7f8c8d; font-size: 14px;">{{ order.detail }} | Услуга: <strong>{{ order.service_type }}</strong></p>
-
-                <div style="margin-top: 8px;">
-                    <span style="display: inline-block; background: #ecf0f1; color: #2c3e50; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 5px;">{{ order.status }}</span>
-                    {% if order.is_express %}
-                        <span style="display: inline-block; background: #e74c3c; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 5px;">⚡ ЭКСПРЕСС</span>
-                    {% endif %}
-                    {% if order.rework_count > 0 %}
-                        <span style="display: inline-block; background: #c0392b; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">↻ Переделка ({{ order.rework_count }})</span>
-                    {% endif %}
-                </div>
+        <div class="card shadow-sm border-0 border-start border-5 border-primary p-3 rounded-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="fw-bold text-dark" style="font-size: 16px;">Заказ #{{ order.id }}</span>
+                {% if order.is_express %}
+                <span class="badge bg-danger px-2 py-1">Экспресс</span>
+                {% endif %}
             </div>
+            <p class="mb-1 small text-dark"><strong>Автомобиль:</strong> {{ order.car }}</p>
+            <p class="mb-3 small text-secondary"><strong>Услуга:</strong> {{ order.service_type }}</p>
 
-            <div style="flex: 1; text-align: center; border-left: 1px solid #ecf0f1; border-right: 1px solid #ecf0f1; padding: 0 15px;">
-                <p style="margin: 0; font-size: 12px; color: #7f8c8d; font-weight: bold;">Код краски:</p>
-                <p style="margin: 5px 0 0 0; font-size: 26px; font-weight: bold; color: #e74c3c;">{{ order.paint_code }}</p>
-                <p style="margin: 5px 0 0 0; font-size: 15px; font-weight: bold; color: #2c3e50;">Объем: {{ order.target_volume }} л.</p>
-            </div>
-
-            <div style="flex: 1; text-align: right;">
-                <a href="/order/{{ order.id }}" style="background: #e67e22; color: white; padding: 10px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Открыть</a>
-            </div>
-
+            <!-- ЛОГИКА КНОПОК ЗАКАЗА -->
+            {% if order.status == 'В очереди' %}
+            <form action="/order/{{ order.id }}/status" method="post" class="mb-0">
+                <input type="hidden" name="new_status" value="В работе">
+                <button type="submit" class="btn btn-primary w-100 fw-bold py-2 rounded-3">Взять в работу</button>
+            </form>
+            {% else %}
+            <!-- Если статус уже "В работе", показываем кнопку перехода -->
+            <a href="/order/{{ order.id }}" class="btn btn-warning text-dark w-100 fw-bold py-2 rounded-3 text-decoration-none text-center">
+                Продолжить работу
+            </a>
+            {% endif %}
         </div>
         {% else %}
-        <div class="card" style="text-align: center; color: #7f8c8d; padding: 40px; border-top: 4px solid #bdc3c7;">
-            <h3 style="margin-top: 0;">Очередь пуста</h3>
-            <p style="margin-bottom: 0;">Все заказы выполнены. Можно выпить кофе ☕</p>
+        <div class="alert alert-light text-center text-muted border rounded-4 shadow-sm py-4">
+            В очереди пока нет заказов.
         </div>
         {% endfor %}
     </div>
+
+    <hr class="text-secondary mb-4 opacity-25">
+
+    <!-- ЗАВЕРШЕНИЕ СМЕНЫ -->
+    <div class="card shadow-sm border-0 p-4 text-center rounded-4 mb-4">
+        <h4 class="text-danger h6 mb-3 fw-bold">Конец рабочего дня</h4>
+        <form action="/shift/end" method="post" enctype="multipart/form-data">
+            <label class="d-block upload-zone p-3 rounded-4 mb-3" style="cursor: pointer;">
+                <span class="fw-bold text-dark d-block mb-1">📸 Итоговые фотографии</span>
+                <input type="file" name="photos" accept="image/*" capture="environment" multiple required style="display: none;" id="end_photos">
+            </label>
+            <p id="file_count_end" class="text-success fw-bold small mb-3"></p>
+            <button type="submit" class="btn btn-danger w-100 fw-bold py-3 rounded-4">Закончить смену</button>
+        </form>
+    </div>
+    {% endif %}
+
 </div>
-{% endblock %}
+
+<script>
+    function updateFileCount(inputId, displayId) {
+        const input = document.getElementById(inputId);
+        const display = document.getElementById(displayId);
+        if(input && display) {
+            input.addEventListener('change', function() {
+                if(this.files.length > 0) { display.innerText = "✅ Выбрано фотографий: " + this.files.length; }
+                else { display.innerText = ""; }
+            });
+        }
+    }
+    updateFileCount('start_photos', 'file_count_start');
+    updateFileCount('end_photos', 'file_count_end');
+</script>
+</body>
+</html>
