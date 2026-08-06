@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Очередь Лаборатории - Colorist CRM{% endblock %}
+
+{% block content %}
+<!-- Железобетонный каркас, который заставит элементы идти сверху вниз -->
+<div style="display: flex; flex-direction: column; gap: 25px; width: 100%; max-width: 1200px;">
+
+    <!-- Шапка -->
+    <div style="padding-bottom: 15px; border-bottom: 2px solid #ecf0f1;">
+        <h2 style="color: #e67e22; margin: 0; font-size: 24px;">Очередь лаборатории</h2>
+    </div>
+
+    <!-- Контейнер со списком заказов -->
+    <div style="display: flex; flex-direction: column; gap: 15px; width: 100%;">
+        {% for order in orders %}
+
+        <!-- Карточка заказа -->
+        <div class="card" style="border-left: 5px solid {% if order.is_express or order.rework_count > 0 %}#e74c3c{% else %}#3498db{% endif %}; display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; box-sizing: border-box;">
+
+            <div style="flex: 2;">
+                <h3 style="margin: 0 0 5px 0; color: #2c3e50;">#{{ order.id }} - {{ order.car }}</h3>
+                <p style="margin: 0; color: #7f8c8d; font-size: 14px;">{{ order.detail }} | Услуга: <strong>{{ order.service_type }}</strong></p>
+
+                <div style="margin-top: 8px;">
+                    <span style="display: inline-block; background: #ecf0f1; color: #2c3e50; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 5px;">{{ order.status }}</span>
+                    {% if order.is_express %}
+                        <span style="display: inline-block; background: #e74c3c; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 5px;">⚡ ЭКСПРЕСС</span>
+                    {% endif %}
+                    {% if order.rework_count > 0 %}
+                        <span style="display: inline-block; background: #c0392b; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">↻ Переделка ({{ order.rework_count }})</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div style="flex: 1; text-align: center; border-left: 1px solid #ecf0f1; border-right: 1px solid #ecf0f1; padding: 0 15px;">
+                <p style="margin: 0; font-size: 12px; color: #7f8c8d; font-weight: bold;">Код краски:</p>
+                <p style="margin: 5px 0 0 0; font-size: 26px; font-weight: bold; color: #e74c3c;">{{ order.paint_code }}</p>
+                <p style="margin: 5px 0 0 0; font-size: 15px; font-weight: bold; color: #2c3e50;">Объем: {{ order.target_volume }} л.</p>
+            </div>
+
+            <div style="flex: 1; text-align: right;">
+                <a href="/order/{{ order.id }}" style="background: #e67e22; color: white; padding: 10px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Открыть</a>
+            </div>
+
+        </div>
+        {% else %}
+        <div class="card" style="text-align: center; color: #7f8c8d; padding: 40px; border-top: 4px solid #bdc3c7;">
+            <h3 style="margin-top: 0;">Очередь пуста</h3>
+            <p style="margin-bottom: 0;">Все заказы выполнены. Можно выпить кофе ☕</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

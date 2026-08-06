@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Рецепт #{{ order.id }} - Colorist CRM</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #000;
+            background: #fff;
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            border: 1px solid #ccc;
+            padding: 30px;
+            border-radius: 5px;
+        }
+        h2, h3 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .info-table, .recipe-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .info-table td {
+            padding: 8px;
+            vertical-align: top;
+        }
+        .recipe-table th, .recipe-table td {
+            border: 1px solid #333;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .recipe-table th {
+            background: #f0f0f0;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .no-print {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .btn {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+            .container {
+                border: none;
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+
+<div class="container">
+    <h2>Карта подбора автоэмали #{{ order.id }}</h2>
+    <hr style="border: 1px solid #333;" />
+
+    <table class="info-table">
+        <tr>
+            <td><strong>Автомобиль:</strong> {{ order.car }}</td>
+            <td><strong>Код краски:</strong> <span style="font-size: 18px;">{{ order.paint_code }}</span></td>
+        </tr>
+        <tr>
+            <td><strong>Деталь:</strong> {{ order.detail }}</td>
+            <td><strong>Тип услуги:</strong> {{ order.service_type }}</td>
+        </tr>
+        <tr>
+            <td><strong>Требуемый объем:</strong> {{ order.target_volume }} л.</td>
+            <td><strong>Дата:</strong>
+                {% if order.deadline_at %}
+                    {{ order.deadline_at.strftime('%d.%m.%Y') }}
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <h3 style="margin-top: 30px; text-align: left;">Компоненты рецепта:</h3>
+
+    <table class="recipe-table">
+        <thead>
+            <tr>
+                <th>Категория</th>
+                <th>Тонер / Пигмент</th>
+                <th class="text-right">Масса (г)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order.recipe_items %}
+            <tr>
+                <td>{{ item.category }}</td>
+                <td><strong>{{ item.toner_name }}</strong></td>
+                <td class="text-right">{{ item.weight }} г</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="3" style="text-align: center; color: #666;">Компоненты не добавлены</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% if order.recipe_items %}
+        <tfoot>
+            <tr>
+                <td colspan="2" class="text-right"><strong>Итого масса:</strong></td>
+                <td class="text-right"><strong>{{ order.recipe_items | map(attribute='weight') | sum | round(1) }} г</strong></td>
+            </tr>
+        </tfoot>
+        {% endif %}
+    </table>
+
+    <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+        <div>Колорист: _______________________</div>
+        <div>Клиент: _______________________</div>
+    </div>
+
+    <div class="no-print">
+        <button class="btn" onclick="window.print()">Печать</button>
+        <button class="btn" style="background: #95a5a6; margin-left: 10px;" onclick="window.history.back()">Назад</button>
+    </div>
+</div>
+
+</body>
+</html>
