@@ -32,18 +32,25 @@ def login(
         password: str = Form(...),
         db: Session = Depends(get_db)
 ):
+    # 1. Ищем пользователя в базе
     user = db.query(User).filter(User.username == username).first()
 
+    # 2. Проверяем пароль
     if not user or not pwd_context.verify(password, user.password_hash):
         return HTMLResponse("Ошибка: Неверный логин или пароль")
 
     response = HTMLResponse()
 
-    if user.role and user.role.lower() == "колорист":
+    # 3. ВОТ ЗДЕСЬ мы определяем роль и куда направить пользователя (HTMX)
+    user_role = user.role.lower() if user.role else ""
+    if user_role == "директор":
+        response.headers["HX-Redirect"] = "/director"
+    elif user_role == "колорист":
         response.headers["HX-Redirect"] = "/colorist"
     else:
         response.headers["HX-Redirect"] = "/dashboard"
 
+    # 4. Сохраняем куку и пускаем в систему
     response.set_cookie(key="username", value=user.username)
     return response
 
@@ -377,3 +384,49 @@ def view_client(request: Request, client_id: int, db: Session = Depends(get_db))
     client = db.query(Client).filter(Client.id == client_id).first()
     if not client: return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(request=request, name="client_detail.html", context={"client": client})
+
+
+@app.get("/director")
+def director_dashboard(request: Request, branch_id: int = None, db: Session = Depends(get_db)):
+    username = request.cookies.get("username")
+    if not username:
+        return RedirectResponse(url="/", status_code=303)
+
+    user = db.query(User).filter(User.username == username).first()
+    if not user or (user.role and user.role.lower() != "директор"):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    # 1. Получаем список всех филиалов для кнопок фильтра
+    branches = db.query(Branch).all()
+
+    # 2. Формируем запрос к заказам
+    query = db.query(Order).order_by(Order.created_at.desc())
+    current_branch = None
+
+    # Если директор нажал на конкретный филиал — фильтруем базу
+    if branch_id:
+        query = query.filter(Order.branch_id == branch_id)
+        current_branch = db.query(Branch).filter(Branch.id == branch_id).first()
+
+    orders = query.all()
+
+    # 3. Считаем метрики (они автоматически посчитаются только для отфильтрованных заказов)
+    total_revenue = sum(o.price for o in orders if o.is_paid)
+    total_paint_volume = sum(o.actual_volume for o in orders if o.actual_volume is not None)
+    total_reworks = sum(o.rework_count for o in orders)
+    active_orders = len([o for o in orders if o.status not in ["Готово", "Выдано"]])
+
+    return templates.TemplateResponse(
+        request=request,
+        name="director_dashboard.html",
+        context={
+            "username": username,
+            "orders": orders,
+            "branches": branches,
+            "current_branch": current_branch,
+            "total_revenue": total_revenue,
+            "total_paint_volume": round(total_paint_volume, 1),
+            "total_reworks": total_reworks,
+            "active_orders": active_orders
+        }
+    )

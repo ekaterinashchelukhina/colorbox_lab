@@ -1,16 +1,15 @@
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
-# Задаем имя для базы данных
-SQLALCHEMY_DATABASE_URL = "sqlite:///./crm_base.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "crm_base.db")
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# ВОТ ОНО! Создаем базовый класс для всех моделей
 Base = declarative_base()
 
 def get_db():
@@ -19,8 +18,3 @@ def get_db():
         yield db
     finally:
         db.close()
-
-# Импортируем модели СТРОГО ПОСЛЕ объявления Base,
-# чтобы избежать ошибки цикличного импорта, и создаем таблицы
-import models
-Base.metadata.create_all(bind=engine)

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Панель Директора - Colorist CRM{% endblock %}
+
+{% block content %}
+<div style="display: flex; flex-direction: column; gap: 20px; width: 100%; max-width: 1200px; margin: 0 auto;">
+
+    <!-- Шапка -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 2px solid #ecf0f1;">
+        <h2 style="color: #8e44ad; margin: 0; font-size: 24px;">
+            {% if current_branch %}
+                Сводка: {{ current_branch.name }}
+            {% else %}
+                Сводка по сети лабораторий
+            {% endif %}
+        </h2>
+        <button style="background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(39, 174, 96, 0.2);">
+            ⬇ Экспорт в Excel
+        </button>
+    </div>
+
+    <!-- Фильтр по филиалам -->
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="/director" style="padding: 8px 20px; text-decoration: none; border-radius: 20px; font-weight: bold; font-size: 14px; transition: 0.2s; {% if not current_branch %}background: #8e44ad; color: white; box-shadow: 0 2px 5px rgba(142, 68, 173, 0.3);{% else %}background: #ecf0f1; color: #2c3e50;{% endif %}">
+            🌍 Вся сеть
+        </a>
+
+        {% for branch in branches %}
+        <a href="/director?branch_id={{ branch.id }}" style="padding: 8px 20px; text-decoration: none; border-radius: 20px; font-weight: bold; font-size: 14px; transition: 0.2s; {% if current_branch and current_branch.id == branch.id %}background: #8e44ad; color: white; box-shadow: 0 2px 5px rgba(142, 68, 173, 0.3);{% else %}background: #ecf0f1; color: #2c3e50;{% endif %}">
+            📍 {{ branch.name }}
+        </a>
+        {% endfor %}
+    </div>
+
+    <!-- Виджеты аналитики -->
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <!-- Выручка -->
+        <div class="card" style="flex: 1; min-width: 200px; padding: 20px; border-left: 5px solid #27ae60; background: #f8f9fa;">
+            <p style="margin: 0 0 5px 0; color: #7f8c8d; font-size: 14px; font-weight: bold; text-transform: uppercase;">Оплаченная выручка</p>
+            <p style="margin: 0; color: #2c3e50; font-size: 28px; font-weight: bold;">{{ total_revenue }} ₽</p>
+        </div>
+
+        <!-- Активные заказы -->
+        <div class="card" style="flex: 1; min-width: 200px; padding: 20px; border-left: 5px solid #3498db; background: #f8f9fa;">
+            <p style="margin: 0 0 5px 0; color: #7f8c8d; font-size: 14px; font-weight: bold; text-transform: uppercase;">В работе / В очереди</p>
+            <p style="margin: 0; color: #2c3e50; font-size: 28px; font-weight: bold;">{{ active_orders }} шт.</p>
+        </div>
+
+        <!-- Расход материалов -->
+        <div class="card" style="flex: 1; min-width: 200px; padding: 20px; border-left: 5px solid #e67e22; background: #f8f9fa;">
+            <p style="margin: 0 0 5px 0; color: #7f8c8d; font-size: 14px; font-weight: bold; text-transform: uppercase;">Фактический расход</p>
+            <p style="margin: 0; color: #2c3e50; font-size: 28px; font-weight: bold;">{{ total_paint_volume }} г.</p>
+        </div>
+
+        <!-- Брак и переделки -->
+        <div class="card" style="flex: 1; min-width: 200px; padding: 20px; border-left: 5px solid #e74c3c; background: #f8f9fa;">
+            <p style="margin: 0 0 5px 0; color: #7f8c8d; font-size: 14px; font-weight: bold; text-transform: uppercase;">Количество переделок</p>
+            <p style="margin: 0; color: #c0392b; font-size: 28px; font-weight: bold;">{{ total_reworks }}</p>
+        </div>
+    </div>
+
+    <!-- Таблица всех заказов -->
+    <div class="card" style="overflow-x: auto; width: 100%; box-sizing: border-box; margin-top: 10px;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+            <thead>
+                <tr style="border-bottom: 2px solid #ecf0f1; background: #f8f9fa;">
+                    <th style="padding: 15px 20px; color: #2c3e50;">ID</th>
+                    {% if not current_branch %}
+                        <th style="padding: 15px 20px; color: #2c3e50;">Филиал</th>
+                    {% endif %}
+                    <th style="padding: 15px 20px; color: #2c3e50;">Клиент</th>
+                    <th style="padding: 15px 20px; color: #2c3e50;">Авто / Услуга</th>
+                    <th style="padding: 15px 20px; color: #2c3e50;">Статус</th>
+                    <th style="padding: 15px 20px; color: #2c3e50;">Сумма</th>
+                    <th style="padding: 15px 20px; text-align: center; color: #2c3e50;">Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr style="border-bottom: 1px solid #ecf0f1; transition: background 0.2s;">
+                    <td style="padding: 15px 20px; font-weight: bold; color: #34495e;">#{{ order.id }}</td>
+
+                    {% if not current_branch %}
+                    <td style="padding: 15px 20px;">
+                        <span style="background: #e8f8f5; color: #16a085; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                            {{ order.branch.name }}
+                        </span>
+                    </td>
+                    {% endif %}
+
+                    <td style="padding: 15px 20px;"><strong>{{ order.client.name }}</strong></td>
+
+                    <td style="padding: 15px 20px;">
+                        {{ order.car }}<br />
+                        <span style="font-size: 12px; color: #7f8c8d;">{{ order.service_type }}</span>
+                    </td>
+
+                    <td style="padding: 15px 20px;">
+                        <span style="background: #ecf0f1; padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: bold; color: #2c3e50;">{{ order.status }}</span>
+                    </td>
+
+                    <td style="padding: 15px 20px; font-weight: bold; font-size: 15px;">
+                        {% if order.is_paid %}
+                            <span style="color: #27ae60;">{{ order.price }} ₽</span>
+                        {% else %}
+                            <span style="color: #e74c3c;">{{ order.price }} ₽</span>
+                        {% endif %}
+                    </td>
+
+                    <td style="padding: 15px 20px; text-align: center;">
+                        <a href="/order/{{ order.id }}" style="background: #8e44ad; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 13px;">Обзор</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="padding: 40px 20px; text-align: center; color: #7f8c8d; font-size: 15px;">
+                        В базе пока нет ни одного заказа.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
