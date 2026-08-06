@@ -1,23 +1,19 @@
-# Виртуальное окружение
-.venv/
-venv/
-ENV/
+# Игнорировать базу данных
+*.db
+*.sqlite
+*.sqlite3
 
-# Кэш Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
+# Игнорировать одноразовые скрипты
+create_users.py
+init_db.py
+reset_admin.py
+seed.py
+seed_order.py
+update_db.py
+user_fix.py
 
-# Локальная база данных и ее журналы (важно не заливать рабочую базу в публичный репо!)
-crm_base.db
-*.db-journal
-*.db-wal
-*.db-shm
-
-# Системные файлы и редакторы
-.DS_Store
+# Игнорировать настройки IDE и временные файлы
 .idea/
-.vscode/
-*.log
+__pycache__/
+.DS_Store
+.venv/

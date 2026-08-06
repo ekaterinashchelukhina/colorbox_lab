@@ -5,46 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="fb4a4161-7108-4f32-8232-42de1dcbdcff" name="Changes" comment="-">
-      <change afterPath="$PROJECT_DIR$/set_admin_token.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_end_20260806225711518035.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_end_20260806230124071809.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_end_20260806231841755404.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_end_20260806232230411128.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_end_20260806234712042652.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_end_20260807001111132152.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_end_20260807002304777561.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_start_20260806225356953921.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_start_20260806230109766401.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_start_20260806230234275061.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_start_20260806231854486020.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_start_20260806232244488081.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_start_20260806232245151920.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_start_20260806232924036716.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_start_20260806233800676734.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_start_20260806235610281316.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_start_20260807002221253423.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/3_start_20260807002501840847.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/5_start_20260806235634220720.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/order_1_after.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/order_1_scales.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/order_2_after.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/order_2_scales.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/static/uploads/order_4_scales.jpg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templates/director_branches.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templates/director_order_detail.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templates/director_users.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/templates/shifts_report_print.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/uploads/order_1_detail.png" beforeDir="false" afterPath="$PROJECT_DIR$/static/uploads/order_1_detail.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/base.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/colorist_dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/colorist_dashboard.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/colorist_order.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/colorist_order.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/director_dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/director_dashboard.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/login.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/login.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/new_order.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/new_order.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/order_detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/order_detail.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
