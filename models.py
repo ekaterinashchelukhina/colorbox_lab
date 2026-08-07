@@ -45,6 +45,7 @@ class Order(Base):
     branch_id = Column(Integer, ForeignKey("branches.id"))
     client_id = Column(Integer, ForeignKey("clients.id"))
     manager_id = Column(Integer, ForeignKey("users.id"))
+    colorist_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # <-- Добавлено поле колориста
 
     car = Column(String)
     detail = Column(String)
@@ -73,6 +74,10 @@ class Order(Base):
     recipe_items = relationship("RecipeItem", back_populates="order", cascade="all, delete-orphan")
     branch = relationship("Branch", back_populates="orders")
     client = relationship("Client", back_populates="orders")
+
+    # <-- Добавлены явные связи, чтобы SQLAlchemy понимала, кто менеджер, а кто колорист
+    manager = relationship("User", foreign_keys=[manager_id])
+    colorist = relationship("User", foreign_keys=[colorist_id])
 
 
 class RecipeItem(Base):

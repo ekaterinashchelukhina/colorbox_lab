@@ -100,7 +100,14 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     if user.role and user.role.lower() == "колорист":
         return RedirectResponse(url="/colorist", status_code=303)
 
-    orders = db.query(Order).filter(Order.branch_id == user.branch_id).all()
+    if user.role and user.role.lower() == "директор":
+        return RedirectResponse(url="/director", status_code=303)
+
+    # Получаем все заказы филиала из базы
+    all_orders = db.query(Order).filter(Order.branch_id == user.branch_id).order_by(Order.created_at.desc()).all()
+
+    # Фильтруем архивы на уровне Python (Заказ остается на дашборде, если он НЕ Выдан ИЛИ НЕ Оплачен)
+    orders = [o for o in all_orders if not (o.status == "Выдано" and o.is_paid == True)]
 
     return templates.TemplateResponse(
         request=request,
@@ -217,8 +224,46 @@ def end_shift(
 
 
 # ==========================================
-# БЛОК ЗАКАЗОВ (МЕНЕДЖЕР И ЛОГИКА СТАТУСОВ)
+# БЛОК АРХИВА
 # ==========================================
+
+@app.get("/archive")
+def view_archive(
+        request: Request,
+        branch_id: Optional[str] = None,
+        db: Session = Depends(get_db)
+):
+    user = get_current_user(request, db)
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+
+    user_role = user.role.capitalize() if user.role else ""
+    user_branch_id = user.branch_id
+
+    filter_branch = int(branch_id) if branch_id and branch_id.isdigit() else None
+
+    # Формируем базовый запрос: берем только Выданные и Оплаченные заказы
+    query = db.query(Order).filter(Order.status == "Выдано", Order.is_paid == True)
+
+    # Применяем фильтры в зависимости от роли
+    if user_role == "Директор":
+        if filter_branch:
+            query = query.filter(Order.branch_id == filter_branch)
+    else:
+        # Менеджеры и колористы видят архив только своего филиала
+        query = query.filter(Order.branch_id == user_branch_id)
+
+    # Сортируем от новых к старым и получаем результат
+    archived_orders = query.order_by(Order.created_at.desc()).all()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="archive.html",
+        context={
+            "orders": archived_orders,
+            "role": user_role
+        }
+    )
 
 @app.get("/new-order")
 def show_new_order_form(request: Request, db: Session = Depends(get_db)):
@@ -245,6 +290,19 @@ def create_order(
     manager = get_current_user(request, db)
     if not manager:
         return RedirectResponse(url="/", status_code=303)
+
+    # ЗАЩИТА ОТ СОЗДАНИЯ ЗАКАЗОВ БЕЗ ФИЛИАЛА
+    if not manager.branch_id:
+        return HTMLResponse("""
+        <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+            <h2 style="color: #e74c3c;">Ошибка: Нет привязки к филиалу!</h2>
+            <p style="font-size: 16px; color: #2c3e50; max-width: 500px; margin: 0 auto;">
+                Ваша учетная запись (возможно, вы зашли под Директором) не привязана к конкретной лаборатории. Создавать заказы могут только менеджеры филиалов.
+            </p>
+            <br><br>
+            <button onclick="window.history.back()" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">← Вернуться назад</button>
+        </div>
+        """)
 
     if service_type in ["Подбор", "Экспресс-подбор"]:
         if not file or not file.filename:
@@ -344,6 +402,10 @@ def update_order_status(
 
     order = db.query(Order).filter(Order.id == order_id).first()
     if order:
+        # ЗАПИСЫВАЕМ КОЛОРИСТА
+        if user.role and user.role.lower() == "колорист":
+            order.colorist_id = user.id
+
         if new_status == "В работе" and order.service_type in ["Подбор", "Экспресс-подбор"]:
             if not order.photo_detail:
                 return HTMLResponse(f"""
@@ -530,8 +592,13 @@ def director_dashboard(request: Request, branch_id: Optional[int] = None, db: Se
     branches = db.query(Branch).all()
     query = db.query(Order).order_by(Order.created_at.desc())
 
-    # На дашборде выводим ТОЛЬКО АКТИВНЫЕ смены (где end_time == None)
-    shifts_query = db.query(Shift).filter(Shift.end_time == None).order_by(Shift.start_time.desc())
+    # Исключаем удаленных сотрудников из смен
+    shifts_query = (
+        db.query(Shift)
+        .join(User)
+        .filter(Shift.end_time == None)
+        .order_by(Shift.start_time.desc())
+    )
 
     current_branch = None
 
@@ -540,7 +607,11 @@ def director_dashboard(request: Request, branch_id: Optional[int] = None, db: Se
         shifts_query = shifts_query.filter(Shift.branch_id == branch_id)
         current_branch = db.query(Branch).filter(Branch.id == branch_id).first()
 
-    orders = query.all()
+    all_orders = query.all()
+
+    # Фильтруем архивы на уровне Python для дашборда Директора
+    orders = [o for o in all_orders if not (o.status == "Выдано" and o.is_paid == True)]
+
     shifts = shifts_query.all()
 
     total_revenue = sum(o.price for o in orders if o.is_paid)
@@ -683,7 +754,6 @@ def add_user(
     if existing:
         return HTMLResponse("Ошибка: Пользователь с таким логином уже существует.")
 
-    # Генерируем уникальный персональный токен доступа для сотрудника
     employee_token = secrets.token_hex(16)
 
     new_user = User(
@@ -696,7 +766,8 @@ def add_user(
     db.add(new_user)
     db.commit()
 
-    return RedirectResponse(url=f"/director/users?success=user&new_token={employee_token}&new_name={username_new}", status_code=303)
+    return RedirectResponse(url=f"/director/users?success=user&new_token={employee_token}&new_name={username_new}",
+                            status_code=303)
 
 
 @app.post("/director/user/delete/{user_id}")
@@ -716,6 +787,11 @@ def delete_user(
     if target_user:
         if target_user.id == current_user.id:
             return HTMLResponse("Ошибка: Нельзя удалить собственную учетную запись директора.")
+
+        # Сначала удаляем все связанные смены этого пользователя
+        db.query(Shift).filter(Shift.user_id == user_id).delete()
+
+        # Затем удаляем самого пользователя
         db.delete(target_user)
         db.commit()
 
@@ -726,7 +802,7 @@ def delete_user(
 def update_order_comment(
         request: Request,
         order_id: int,
-        comment_type: str = Form(...),  # "manager" или "colorist"
+        comment_type: str = Form(...),
         comment_text: str = Form(...),
         db: Session = Depends(get_db)
 ):

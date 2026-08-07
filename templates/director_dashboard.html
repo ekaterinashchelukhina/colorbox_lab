@@ -109,7 +109,10 @@
                     <tr style="border-bottom: 1px solid #ecf0f1;">
                         <td style="padding: 12px 15px; font-weight: bold; color: #34495e;">{{ shift.user.username }}</td>
                         <td style="padding: 12px 15px;">{{ shift.branch.name if shift.branch else "—" }}</td>
-                        <td style="padding: 12px 15px;">{{ shift.start_time.strftime('%d.%m.%Y %H:%M') }}</td>
+                        <td style="padding: 12px 15px;">
+                            <!-- ВРЕМЯ ЗАМЕНЕНО НА ЛОКАЛЬНОЕ (ЧЕРЕЗ JS) -->
+                            <span class="local-time" data-utc="{{ shift.start_time.strftime('%Y-%m-%dT%H:%M:%S') }}"></span>
+                        </td>
                         <td style="padding: 12px 15px;">
                             {% if shift.start_photos %}
                                 <div style="display: flex; gap: 6px; flex-wrap: wrap;">
@@ -170,13 +173,19 @@
 
                     {% if not current_branch %}
                     <td style="padding: 15px 20px;">
-                        <span style="background: #e8f8f5; color: #16a085; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
-                            {{ order.branch.name }}
-                        </span>
+                        {% if order.branch %}
+                            <span style="background: #e8f8f5; color: #16a085; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                {{ order.branch.name }}
+                            </span>
+                        {% else %}
+                            <span style="background: #fadbd8; color: #c0392b; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                                Без филиала
+                            </span>
+                        {% endif %}
                     </td>
                     {% endif %}
 
-                    <td style="padding: 15px 20px;"><strong>{{ order.client.name }}</strong></td>
+                    <td style="padding: 15px 20px;"><strong>{{ order.client.name if order.client else 'Неизвестно' }}</strong></td>
 
                     <td style="padding: 15px 20px;">
                         {{ order.car }}<br />
@@ -184,7 +193,17 @@
                     </td>
 
                     <td style="padding: 15px 20px;">
-                        <span style="background: #ecf0f1; padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: bold; color: #2c3e50;">{{ order.status }}</span>
+                        <span style="background: #ecf0f1; padding: 4px 8px; border-radius: 4px; font-size: 13px; font-weight: bold; color: #2c3e50; display: inline-block; margin-bottom: 5px;">
+                            {{ order.status }}
+                        </span>
+                        <br>
+                        <span style="font-size: 11px; color: #7f8c8d; font-weight: bold;">
+                            {% if order.colorist %}
+                                👨‍🎨 {{ order.colorist.username }}
+                            {% else %}
+                                ⏳ Ждет мастера
+                            {% endif %}
+                        </span>
                     </td>
 
                     <td style="padding: 15px 20px; font-weight: bold; font-size: 15px;">
