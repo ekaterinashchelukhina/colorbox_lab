@@ -28,7 +28,10 @@
             Для доступа к заказам необходимо зафиксировать порядок в лаборатории. Сделайте 4 обязательных фото.
         </p>
 
-        <form action="/shift/start" method="post" enctype="multipart/form-data" class="flex flex-col gap-5">
+        <form action="/shift/start" method="post" enctype="multipart/form-data" class="flex flex-col gap-5" id="start-shift-form">
+
+            <!-- СКРЫТОЕ ПОЛЕ ДЛЯ ПЕРЕДАЧИ ВРЕМЕНИ УСТРОЙСТВА -->
+            <input type="hidden" name="client_time" id="client_time_input">
 
             <!-- Сетка из 4 кнопок для фото -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -72,11 +75,11 @@
             <span class="text-green-800 font-bold text-base">Смена активна</span>
         </div>
 
-        <!-- ВОЗВРАЩАЕМ СКРИПТ (Браузер сам конвертирует UTC в локальное время) -->
+        <!-- ВЫВОДИМ ТОЧНОЕ ЛОКАЛЬНОЕ ВРЕМЯ УСТРОЙСТВА БЕЗ СДВИГОВ -->
         <span class="text-green-700 text-sm font-bold bg-white px-3 py-1 rounded-lg border border-green-200" id="local_start_time"></span>
         <script>
-            const utcDate = new Date("{{ active_shift.start_time.strftime('%Y-%m-%dT%H:%M:%S') }}Z");
-            document.getElementById('local_start_time').innerText = "Старт: " + utcDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            const deviceDate = new Date("{{ active_shift.start_time.strftime('%Y-%m-%dT%H:%M:%S') }}");
+            document.getElementById('local_start_time').innerText = "Старт: " + deviceDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         </script>
     </div>
 
@@ -137,8 +140,19 @@
 
 </div>
 
-<!-- Скрипт для валидации 4 отдельных фотографий (только для старта смены) -->
+<!-- Скрипт для валидации фото и фиксации точного времени устройства -->
 <script>
+    // Фиксируем локальное время устройства прямо перед отправкой формы старта
+    const startForm = document.getElementById('start-shift-form');
+    if (startForm) {
+        startForm.addEventListener('submit', function() {
+            const now = new Date();
+            const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+            const localIso = new Date(now.getTime() - offsetMs).toISOString().slice(0, 19);
+            document.getElementById('client_time_input').value = localIso;
+        });
+    }
+
     function setupStrictPhotoValidation(inputIds, btnId, btnActiveText) {
         const inputs = inputIds.map(id => document.getElementById(id));
         const submitBtn = document.getElementById(btnId);
