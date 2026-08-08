@@ -1,99 +1,152 @@
 {% extends "base.html" %}
 
-{% block title %}Детали смены #{{ shift.id }} - ColorBox Lab{% endblock %}
+{% block title %}Заказ #{{ order.id }} - ColorBox Lab{% endblock %}
 
 {% block content %}
-<div class="flex flex-col gap-6 w-full max-w-6xl mx-auto">
-
+<div class="card" style="max-width: 900px; margin: 0 auto;">
     <!-- Шапка -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-2 border-[#ecf0f1] pb-4">
-        <div>
-            <h2 class="text-2xl font-bold text-[#2c3e50] flex items-center gap-2 m-0">
-                Смена #{{ shift.id }}
-            </h2>
-            <div class="text-sm text-[#7f8c8d] mt-1 font-bold">
-                Колорист: <span class="text-[#3498db]">{{ shift.user.username if shift.user else '—' }}</span> |
-                Филиал: {{ shift.branch.name if shift.branch else '—' }}
-            </div>
-        </div>
+    <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 20px;">
+        <h2 style="margin: 0; color: #2c3e50;">Заказ #{{ order.id }}</h2>
+        <span style="background: #ecf0f1; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; color: #34495e;">{{ order.status }}</span>
 
-        <a href="/director/shifts" class="bg-[#7f8c8d] hover:bg-[#34495e] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors text-center w-full sm:w-auto">
-            ← Назад к журналу
-        </a>
+        <a href="/order/{{ order.id }}/print" target="_blank" style="background: #2c3e50; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; margin-left: auto;">🖨 Печать</a>
+        <a href="/director/orders" style="color: #7f8c8d; text-decoration: none; font-weight: bold; margin-left: 15px;">← Назад к списку</a>
     </div>
 
-    <!-- Сетка Было / Стало -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-
-        <!-- ЛЕВАЯ КОЛОНКА: ОТКРЫТИЕ -->
-        <div class="bg-white p-5 rounded-xl border border-[#ecf0f1] shadow-sm">
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <h3 class="text-lg font-bold text-[#2c3e50]">УТРО (Открытие)</h3>
-                <span class="text-sm font-bold text-gray-500 local-time" data-utc="{{ shift.start_time.strftime('%Y-%m-%dT%H:%M:%S') if shift.start_time else '' }}"></span>
-            </div>
-
-            {% if start_photos_list %}
-                <div class="grid grid-cols-2 gap-3">
-                    {% for photo_url in start_photos_list %}
-                    <a href="/{{ photo_url }}" target="_blank" class="block bg-gray-100 rounded-lg overflow-hidden border border-gray-200 aspect-square hover:opacity-90 transition relative group">
-                        <img src="/{{ photo_url }}" alt="Фото открытия" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition flex items-center justify-center">
-                            <span class="text-white opacity-0 group-hover:opacity-100 font-bold drop-shadow-md">🔍 Увеличить</span>
-                        </div>
-                    </a>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="text-center py-12 text-gray-400 font-bold bg-gray-50 rounded-lg border border-dashed border-gray-300">Фотографии отсутствуют</div>
+    <!-- Данные заказа -->
+    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 300px; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1; box-sizing: border-box;">
+            <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">Данные по подбору</h3>
+            <p style="margin: 8px 0;"><strong>Автомобиль:</strong> {{ order.car }}</p>
+            <p style="margin: 8px 0;"><strong>Деталь:</strong> {{ order.detail }}</p>
+            <p style="margin: 8px 0;"><strong>Тип услуги:</strong> <span style="background: #8e44ad; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">{{ order.service_type }}</span></p>
+            <p style="margin: 12px 0 8px 0;"><strong>Код краски:</strong> <span style="font-size: 18px; color: #e74c3c; font-weight: bold;">{{ order.paint_code }}</span></p>
+            <p style="margin: 8px 0;"><strong>Требуемый объем:</strong> {{ order.target_volume }} л</p>
+            {% if order.actual_volume %}
+            <p style="margin: 8px 0; color: #27ae60;"><strong>Фактический объем:</strong> {{ order.actual_volume }} г</p>
             {% endif %}
+            <p style="margin: 8px 0; margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 10px;">
+                <strong>Колорист:</strong>
+                <span style="color: #3498db; font-weight: bold;">
+                    {{ order.colorist.username if order.colorist else 'Удаленный сотрудник' }}
+                </span>
+            </p>
         </div>
 
-        <!-- ПРАВАЯ КОЛОНКА: ЗАКРЫТИЕ -->
-        <div class="bg-gray-50 p-5 rounded-xl border border-[#ecf0f1] shadow-sm">
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <h3 class="text-lg font-bold text-[#2c3e50]">ВЕЧЕР (Закрытие)</h3>
-                {% if shift.end_time %}
-                    <span class="text-sm font-bold text-gray-500 local-time" data-utc="{{ shift.end_time.strftime('%Y-%m-%dT%H:%M:%S') }}"></span>
+        <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box;">
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1;">
+                <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">Клиент и сроки</h3>
+                <p style="margin: 8px 0;"><strong>Имя (СТО):</strong>
+                    {% if order.client %}
+                        <a href="/client/{{ order.client.id }}" style="color: #2980b9; font-weight: bold; text-decoration: none;">{{ order.client.name }}</a>
+                    {% else %}
+                        Не указан
+                    {% endif %}
+                </p>
+                <p style="margin: 8px 0;"><strong>Дедлайн:</strong>
+                    {% if order.deadline_at %}
+                        {{ order.deadline_at.strftime('%d.%m.%Y') }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </p>
+            </div>
+
+            <!-- Блок Финансы (Только для просмотра) -->
+            <div style="background: #e8f6f3; padding: 20px; border-radius: 8px; border: 1px solid #1abc9c;">
+                <h3 style="margin-top: 0; color: #16a085; font-size: 16px; border-bottom: 1px solid #a3e4d7; padding-bottom: 8px;">Финансы и Оплата</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                    <div>
+                        <span style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 3px; color: #2c3e50;">Итоговая стоимость:</span>
+                        <span style="font-size: 20px; font-weight: bold; color: #16a085;">{{ order.price }} ₽</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 14px; font-weight: bold; color: {% if order.is_paid %}#27ae60{% else %}#e74c3c{% endif %};">
+                            {% if order.is_paid %}✅ Заказ оплачен{% else %}❌ Заказ не оплачен{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Блок комментариев (Только для чтения) -->
+    <div style="margin-top: 30px; background: #fdfefe; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1;">
+        <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">Примечания к заказу</h3>
+
+        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px;">
+            <div style="flex: 1; min-width: 280px;">
+                <label style="font-size: 13px; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 5px;">Комментарий колориста:</label>
+                <div style="padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; color: #2c3e50; min-height: 50px; font-size: 14px;">
+                    {{ order.colorist_comment if order.colorist_comment else "Колорист ничего не написал." }}
+                </div>
+            </div>
+
+            <div style="flex: 1; min-width: 280px;">
+                <label style="font-size: 13px; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 5px;">Комментарий менеджера:</label>
+                <div style="padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; color: #2c3e50; min-height: 50px; font-size: 14px;">
+                    {{ order.manager_comment if order.manager_comment else "Комментарий отсутствует." }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Блок фотографий (Фотоконтроль - Только просмотр, без кнопок загрузки) -->
+    <div style="margin-top: 30px;">
+        <h3 style="color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px;">
+            Фотоконтроль
+            {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}
+                (3 этапа)
+            {% else %}
+                (Только весы)
+            {% endif %}
+        </h3>
+
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+
+            {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}
+            <!-- 1. Деталь ДО -->
+            <div style="flex: 1; min-width: 250px; background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ecf0f1; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #34495e; font-size: 14px;">1. Деталь ДО работы</h4>
+                {% if order.photo_detail %}
+                    <a href="/{{ order.photo_detail }}" target="_blank">
+                        <img src="/{{ order.photo_detail }}" alt="Деталь до" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                    </a>
                 {% else %}
-                    <span class="text-sm font-bold text-[#f39c12]">Смена идет</span>
+                    <div style="height: 180px; background: #ecf0f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #95a5a6; border: 2px dashed #bdc3c7; font-size: 13px;">Фото отсутствует</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- 2. Краска на весах -->
+            <div style="flex: 1; min-width: 250px; background: #fff8e1; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ffe082; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #d35400; font-size: 14px;">
+                    {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}2. {% endif %}Краска на весах
+                </h4>
+                {% if order.photo_scales %}
+                    <a href="/{{ order.photo_scales }}" target="_blank">
+                        <img src="/{{ order.photo_scales }}" alt="Весы" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                    </a>
+                {% else %}
+                    <div style="height: 180px; background: #fff3e0; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #e67e22; border: 2px dashed #ffb74d; font-size: 13px;">Фото отсутствует</div>
                 {% endif %}
             </div>
 
-            {% if end_photos_list %}
-                <div class="grid grid-cols-2 gap-3">
-                    {% for photo_url in end_photos_list %}
-                    <a href="/{{ photo_url }}" target="_blank" class="block bg-gray-100 rounded-lg overflow-hidden border border-gray-200 aspect-square hover:opacity-90 transition relative group">
-                        <img src="/{{ photo_url }}" alt="Фото закрытия" class="w-full h-full object-cover">
-                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition flex items-center justify-center">
-                            <span class="text-white opacity-0 group-hover:opacity-100 font-bold drop-shadow-md">🔍 Увеличить</span>
-                        </div>
+            {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}
+            <!-- 3. Деталь ПОСЛЕ -->
+            <div style="flex: 1; min-width: 250px; background: #e8f8f5; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #a3e4d7; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #16a085; font-size: 14px;">3. Деталь ПОСЛЕ работы</h4>
+                {% if order.photo_after %}
+                    <a href="/{{ order.photo_after }}" target="_blank">
+                        <img src="/{{ order.photo_after }}" alt="Деталь после" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
                     </a>
-                    {% endfor %}
-                </div>
-            {% elif not shift.end_time %}
-                <div class="text-center py-12 text-[#f39c12] font-bold bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
-                    Смена еще не закрыта<br><span class="text-sm text-gray-500 font-normal">Фотографии появятся после завершения дня</span>
-                </div>
-            {% else %}
-                <div class="text-center py-12 text-gray-400 font-bold bg-gray-100 rounded-lg border border-dashed border-gray-300">Фотографии отсутствуют</div>
+                {% else %}
+                    <div style="height: 180px; background: #e0f2f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #1abc9c; border: 2px dashed #80cbc4; font-size: 13px;">Фото отсутствует</div>
+                {% endif %}
+            </div>
             {% endif %}
+
         </div>
-
     </div>
-
 </div>
-
-<!-- Скрипт автоматического перевода времени из UTC в локальное -->
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        document.querySelectorAll('.local-time').forEach(el => {
-            const utcString = el.getAttribute('data-utc');
-            if(utcString) {
-                // Добавляем 'Z', чтобы браузер понял, что это UTC, и сам прибавил нужные часы
-                const date = new Date(utcString + "Z");
-                el.innerText = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            }
-        });
-    });
-</script>
 {% endblock %}
