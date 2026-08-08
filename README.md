@@ -20,14 +20,7 @@
 ## 🛠 Технологии
 
 *   **Бэкенд**: Python, FastAPI, SQLAlchemy, Pydantic
-*   **База данных**: PostgreSQL / SQLite
+*   **База данных**: PostgreSQL
 *   **Шаблонизатор**: Jinja2, HTML5
 *   **Фронтенд**: Tailwind CSS
 *   **Работа с изображениями**: Pillow (сжатие и оптимизация фото)
-
-## ⚙️ Установка и запуск
-
-1. Клонируйте репозиторий:
-   ```bash
-   git clone <ссылка-на-репозиторий>
-   cd ColorboxLab
