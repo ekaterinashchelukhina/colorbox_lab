@@ -28,6 +28,11 @@
             <span class="badge bg-primary fs-6">{{ order.service_type }}</span>
             <span class="fw-bold text-dark fs-5 text-danger">{{ order.paint_code }}</span>
         </div>
+        {% if order.rework_count > 0 %}
+        <div class="mb-2">
+            <span class="badge bg-purple text-white" style="background-color:#8e44ad;">🎨 Доколеровка №{{ order.rework_count }}</span>
+        </div>
+        {% endif %}
         <hr class="opacity-25 my-2">
         <p class="mb-1 small"><strong>Автомобиль:</strong> {{ order.car }}</p>
         <p class="mb-1 small"><strong>Деталь:</strong> {{ order.detail }}</p>
@@ -35,6 +40,62 @@
     </div>
 
     <!-- Фотоконтроль (отдельные формы для мгновенной загрузки) -->
+    {% if order.rework_count > 0 %}
+    <h3 class="h6 text-secondary text-uppercase fw-bold mb-3">Фотоконтроль доколеровки</h3>
+
+    <div class="d-flex flex-column gap-3 mb-4">
+        <!-- Фото Весов -->
+        <div class="card shadow-sm border-0 rounded-4 p-3">
+            <span class="fw-bold mb-2">1. Краска на весах</span>
+            {% if order.rework_photo_scales %}
+                <img src="{{ order.rework_photo_scales }}" class="photo-preview mb-2">
+                <span class="text-success small fw-bold">✅ Загружено</span>
+            {% else %}
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="photo_type" value="rework_scales">
+                    <label class="d-block upload-zone p-2 rounded-3 mb-2">
+                        <span class="d-block small text-dark fw-bold py-2">📸 Сделать фото весов</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" required style="display: none;" onchange="this.form.submit()">
+                    </label>
+                </form>
+            {% endif %}
+        </div>
+
+        <!-- Образец после доколеровки -->
+        <div class="card shadow-sm border-0 rounded-4 p-3">
+            <span class="fw-bold mb-2">2. Образец после работы</span>
+            {% if order.rework_photo_after %}
+                <img src="{{ order.rework_photo_after }}" class="photo-preview mb-2">
+                <span class="text-success small fw-bold">✅ Загружено</span>
+            {% else %}
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="photo_type" value="rework_after">
+                    <label class="d-block upload-zone p-2 rounded-3 mb-2">
+                        <span class="d-block small text-dark fw-bold py-2">📸 Сделать фото образца после работы</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" required style="display: none;" onchange="this.form.submit()">
+                    </label>
+                </form>
+            {% endif %}
+        </div>
+
+        <!-- Тест-напыл старый/новый -->
+        <div class="card shadow-sm border-0 rounded-4 p-3">
+            <span class="fw-bold mb-2">3. Тест-напыл (старый и новый на образце)</span>
+            {% if order.rework_photo_test %}
+                <img src="{{ order.rework_photo_test }}" class="photo-preview mb-2">
+                <span class="text-success small fw-bold">✅ Загружено</span>
+            {% else %}
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="photo_type" value="rework_test">
+                    <label class="d-block upload-zone p-2 rounded-3 mb-2">
+                        <span class="d-block small text-dark fw-bold py-2">📸 Сфотографировать тест-напыл</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" required style="display: none;" onchange="this.form.submit()">
+                    </label>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
     <h3 class="h6 text-secondary text-uppercase fw-bold mb-3">Фотоконтроль (по ТЗ)</h3>
 
     <div class="d-flex flex-column gap-3 mb-4">
@@ -74,6 +135,7 @@
         </div>
         {% endif %}
     </div>
+    {% endif %}
 
     <!-- Сдача работы -->
     <h3 class="h6 text-secondary text-uppercase fw-bold mb-3">Сдача работы</h3>

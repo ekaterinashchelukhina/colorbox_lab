@@ -8,6 +8,9 @@
     <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 20px;">
         <h2 style="margin: 0; color: #2c3e50;">Заказ #{{ order.id }}</h2>
         <span style="background: #ecf0f1; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; color: #34495e;">{{ order.status }}</span>
+        {% if order.rework_count > 0 %}
+        <span style="background: #8e44ad; color: white; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold;">🎨 Доколеровка №{{ order.rework_count }}</span>
+        {% endif %}
 
         <form action="/order/{{ order.id }}/status" method="post" style="display: flex; gap: 10px; margin-left: 20px;">
             <select name="new_status" style="padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; background: white;">
@@ -19,6 +22,12 @@
             </select>
             <button type="submit" style="background: #3498db; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">Изменить</button>
         </form>
+
+        {% if order.status == "Выдано" %}
+        <form action="/order/{{ order.id }}/rework" method="post" onsubmit="return confirm('Отправить заказ на доколеровку? Заказ вернётся в очередь колориста.');">
+            <button type="submit" style="background: #8e44ad; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold;">🎨 Доколеровка</button>
+        </form>
+        {% endif %}
 
         <a href="/order/{{ order.id }}/print" target="_blank" style="background: #2c3e50; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; margin-left: auto;">🖨 Печать</a>
         <a href="/dashboard" style="color: #7f8c8d; text-decoration: none; font-weight: bold; margin-left: 15px;">← Назад к списку</a>
@@ -162,5 +171,57 @@
 
         </div>
     </div>
+
+    {% if order.rework_count > 0 %}
+    <!-- Блок фотографий доколеровки -->
+    <div style="margin-top: 30px;">
+        <h3 style="color: #8e44ad; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px;">🎨 Фотоконтроль доколеровки №{{ order.rework_count }}</h3>
+
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+            <div style="flex: 1; min-width: 250px; background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #8e44ad; font-size: 14px;">1. Краска на весах</h4>
+                {% if order.rework_photo_scales %}
+                    <img src="{{ order.rework_photo_scales }}" alt="Весы (доколеровка)" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; background: white; border: 1px solid #ddd;" />
+                {% else %}
+                    <div style="height: 180px; background: #f4ecf7; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #a569bd; margin-bottom: 10px; border: 2px dashed #d7bde2; font-size: 13px;">Ждём колориста</div>
+                {% endif %}
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" style="display: flex; gap: 5px; justify-content: center;">
+                    <input type="hidden" name="photo_type" value="rework_scales" />
+                    <input type="file" name="file" accept="image/*" capture="environment" required="required" style="font-size: 11px; max-width: 160px;" />
+                    <button type="submit" style="background: #8e44ad; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Загрузить</button>
+                </form>
+            </div>
+
+            <div style="flex: 1; min-width: 250px; background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #8e44ad; font-size: 14px;">2. Образец после работы</h4>
+                {% if order.rework_photo_after %}
+                    <img src="{{ order.rework_photo_after }}" alt="Образец после доколеровки" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; background: white; border: 1px solid #ddd;" />
+                {% else %}
+                    <div style="height: 180px; background: #f4ecf7; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #a569bd; margin-bottom: 10px; border: 2px dashed #d7bde2; font-size: 13px;">Ждём колориста</div>
+                {% endif %}
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" style="display: flex; gap: 5px; justify-content: center;">
+                    <input type="hidden" name="photo_type" value="rework_after" />
+                    <input type="file" name="file" accept="image/*" capture="environment" required="required" style="font-size: 11px; max-width: 160px;" />
+                    <button type="submit" style="background: #8e44ad; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Загрузить</button>
+                </form>
+            </div>
+
+            <div style="flex: 1; min-width: 250px; background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #8e44ad; font-size: 14px;">3. Тест-напыл (старый и новый)</h4>
+                {% if order.rework_photo_test %}
+                    <img src="{{ order.rework_photo_test }}" alt="Тест-напыл" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; background: white; border: 1px solid #ddd;" />
+                {% else %}
+                    <div style="height: 180px; background: #f4ecf7; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #a569bd; margin-bottom: 10px; border: 2px dashed #d7bde2; font-size: 13px;">Ждём колориста</div>
+                {% endif %}
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" style="display: flex; gap: 5px; justify-content: center;">
+                    <input type="hidden" name="photo_type" value="rework_test" />
+                    <input type="file" name="file" accept="image/*" capture="environment" required="required" style="font-size: 11px; max-width: 160px;" />
+                    <button type="submit" style="background: #8e44ad; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Загрузить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}

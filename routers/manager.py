@@ -143,20 +143,23 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
         if user.role and user.role.lower() == "колорист":
             order.colorist_id = user.id
 
+        # Заказ находится в активном цикле доколеровки, пока не сдан снова
+        is_rework_cycle = order.rework_count > 0 and order.status != "Выдано"
+
         # Проверки фотоконтроля
-        if new_status == "В работе" and order.service_type in ["Подбор", "Экспресс-подбор"] and not order.photo_detail:
+        if new_status == "В работе" and not is_rework_cycle and order.service_type in ["Подбор", "Экспресс-подбор"] and not order.photo_detail:
             return HTMLResponse("<h2>Ошибка: Нет фото детали до работы!</h2>")
         if new_status == "Готово":
-            if order.service_type in ["Подбор", "Экспресс-подбор"] and (
+            if is_rework_cycle:
+                if not order.rework_photo_scales or not order.rework_photo_after or not order.rework_photo_test:
+                    return HTMLResponse("<h2>Ошибка: Отсутствует фотоконтроль доколеровки!</h2>")
+            elif order.service_type in ["Подбор", "Экспресс-подбор"] and (
                     not order.photo_scales or not order.photo_after):
                 return HTMLResponse("<h2>Ошибка: Отсутствует фотоконтроль!</h2>")
             elif order.service_type not in ["Подбор", "Экспресс-подбор"] and not order.photo_scales:
                 return HTMLResponse("<h2>Ошибка: Отсутствует фотоконтроль!</h2>")
 
-        if new_status == "Переделка":
-            order.status = "В очереди"
-            order.rework_count += 1
-        elif new_status == "Готово":
+        if new_status == "Готово":
             order.status = "Ожидает выдачи"
             if actual_volume is not None:
                 order.actual_volume = actual_volume
@@ -165,6 +168,21 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
         db.commit()
 
     return RedirectResponse(url="/colorist" if new_status == "Готово" else f"/order/{order_id}", status_code=303)
+
+
+@router.post("/order/{order_id}/rework")
+def send_order_to_rework(request: Request, order_id: int, db: Session = Depends(get_db),
+                         user: User = Depends(require_login)):
+    """Возвращает выданный заказ в очередь колориста на доколеровку."""
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if order and order.status == "Выдано":
+        order.status = "В очереди"
+        order.rework_count += 1
+        order.rework_photo_scales = None
+        order.rework_photo_after = None
+        order.rework_photo_test = None
+        db.commit()
+    return RedirectResponse(url=f"/order/{order_id}", status_code=303)
 
 
 @router.post("/order/{order_id}/upload")
@@ -180,6 +198,12 @@ def upload_photo(request: Request, order_id: int, photo_type: str = Form(...), f
             order.photo_scales = f"/{file_path}"
         elif photo_type == "after":
             order.photo_after = f"/{file_path}"
+        elif photo_type == "rework_scales":
+            order.rework_photo_scales = f"/{file_path}"
+        elif photo_type == "rework_after":
+            order.rework_photo_after = f"/{file_path}"
+        elif photo_type == "rework_test":
+            order.rework_photo_test = f"/{file_path}"
         db.commit()
     return RedirectResponse(url=f"/order/{order_id}", status_code=303)
 

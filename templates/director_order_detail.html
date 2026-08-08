@@ -8,6 +8,9 @@
     <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 20px;">
         <h2 style="margin: 0; color: #2c3e50;">Заказ #{{ order.id }}</h2>
         <span style="background: #ecf0f1; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; color: #34495e;">{{ order.status }}</span>
+        {% if order.rework_count > 0 %}
+        <span style="background: #8e44ad; color: white; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold;">🎨 Доколеровка №{{ order.rework_count }}</span>
+        {% endif %}
 
         <a href="/order/{{ order.id }}/print" target="_blank" style="background: #2c3e50; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; margin-left: auto;">🖨 Печать</a>
         <a href="javascript:history.back()" style="color: #7f8c8d; text-decoration: none; font-weight: bold; margin-left: 15px;">← Назад к списку</a>
@@ -148,5 +151,47 @@
 
         </div>
     </div>
+
+    {% if order.rework_count > 0 %}
+    <!-- Блок фотографий доколеровки (Только просмотр) -->
+    <div style="margin-top: 30px;">
+        <h3 style="color: #8e44ad; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px;">🎨 Фотоконтроль доколеровки №{{ order.rework_count }}</h3>
+
+        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+            <div style="flex: 1; min-width: 250px; background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #8e44ad; font-size: 14px;">1. Краска на весах</h4>
+                {% if order.rework_photo_scales %}
+                    <a href="/{{ order.rework_photo_scales if not order.rework_photo_scales.startswith('/') else order.rework_photo_scales[1:] }}" target="_blank">
+                        <img src="/{{ order.rework_photo_scales if not order.rework_photo_scales.startswith('/') else order.rework_photo_scales[1:] }}" alt="Весы (доколеровка)" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                    </a>
+                {% else %}
+                    <div style="height: 180px; background: #f4ecf7; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #a569bd; border: 2px dashed #d7bde2; font-size: 13px;">Фото отсутствует</div>
+                {% endif %}
+            </div>
+
+            <div style="flex: 1; min-width: 250px; background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #8e44ad; font-size: 14px;">2. Образец после работы</h4>
+                {% if order.rework_photo_after %}
+                    <a href="/{{ order.rework_photo_after if not order.rework_photo_after.startswith('/') else order.rework_photo_after[1:] }}" target="_blank">
+                        <img src="/{{ order.rework_photo_after if not order.rework_photo_after.startswith('/') else order.rework_photo_after[1:] }}" alt="Образец после доколеровки" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                    </a>
+                {% else %}
+                    <div style="height: 180px; background: #f4ecf7; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #a569bd; border: 2px dashed #d7bde2; font-size: 13px;">Фото отсутствует</div>
+                {% endif %}
+            </div>
+
+            <div style="flex: 1; min-width: 250px; background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box;">
+                <h4 style="margin-top: 0; color: #8e44ad; font-size: 14px;">3. Тест-напыл (старый и новый)</h4>
+                {% if order.rework_photo_test %}
+                    <a href="/{{ order.rework_photo_test if not order.rework_photo_test.startswith('/') else order.rework_photo_test[1:] }}" target="_blank">
+                        <img src="/{{ order.rework_photo_test if not order.rework_photo_test.startswith('/') else order.rework_photo_test[1:] }}" alt="Тест-напыл" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                    </a>
+                {% else %}
+                    <div style="height: 180px; background: #f4ecf7; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #a569bd; border: 2px dashed #d7bde2; font-size: 13px;">Фото отсутствует</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

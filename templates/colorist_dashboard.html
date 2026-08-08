@@ -93,9 +93,14 @@
                 <div class="absolute left-0 top-0 bottom-0 w-2 {% if order.is_express %}bg-[#e74c3c]{% else %}bg-[#3498db]{% endif %}"></div>
                 <div class="flex justify-between items-center mb-3 pl-2">
                     <span class="font-bold text-[#2c3e50] text-lg">Заказ #{{ order.id }}</span>
-                    {% if order.is_express %}
-                    <span class="bg-[#e74c3c] text-white text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wide">Экспресс</span>
-                    {% endif %}
+                    <div class="flex gap-2">
+                        {% if order.rework_count > 0 %}
+                        <span class="bg-purple-600 text-white text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wide">🎨 Доколеровка</span>
+                        {% endif %}
+                        {% if order.is_express %}
+                        <span class="bg-[#e74c3c] text-white text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wide">Экспресс</span>
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="flex flex-col gap-1 mb-4 pl-2 text-sm">
                     <p class="m-0 text-[#2c3e50]"><strong>Клиент:</strong> {{ order.client.name if order.client else 'Не указан' }}</p>

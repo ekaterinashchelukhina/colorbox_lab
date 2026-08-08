@@ -68,6 +68,12 @@ class Order(Base):
     photo_detail = Column(String, nullable=True)
     photo_scales = Column(String, nullable=True)
     photo_after = Column(String, nullable=True)
+
+    # Фотоконтроль доколеровки (заполняется заново при каждом возврате из архива)
+    rework_photo_scales = Column(String, nullable=True)
+    rework_photo_after = Column(String, nullable=True)
+    rework_photo_test = Column(String, nullable=True)
+
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     deadline_at = Column(DateTime)
 

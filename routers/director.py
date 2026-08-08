@@ -66,7 +66,8 @@ def director_dashboard(request: Request, branch_id: Optional[str] = None, db: Se
     normalized_volume = case((volume_expr > 10, volume_expr / 1000.0), else_=volume_expr)
     total_paint_volume = db.query(func.sum(normalized_volume)).filter(*branch_filter).scalar() or 0.0
 
-    total_reworks = sum(o.rework_count for o in orders)
+    rework_query = db.query(Order).filter(Order.rework_count > 0, Order.status != "Выдано")
+    total_reworks = rework_query.filter(*branch_filter).count()
     active_orders = len([o for o in orders if o.status not in ["Готово", "Выдано"]])
 
     return templates.TemplateResponse(request=request, name="director_dashboard.html", context={

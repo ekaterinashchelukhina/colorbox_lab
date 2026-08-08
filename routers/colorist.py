@@ -26,7 +26,7 @@ def colorist_dashboard(request: Request, db: Session = Depends(get_db)):
     if active_shift:
         orders = db.query(Order).filter(
             Order.branch_id == user.branch_id,
-            Order.status.in_(["В очереди", "В работе", "Переделка"])
+            Order.status.in_(["В очереди", "В работе"])
         ).order_by(
             Order.is_express.desc(), Order.rework_count.desc(), Order.created_at.asc()
         ).all()
