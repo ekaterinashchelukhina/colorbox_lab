@@ -1,17 +1,28 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request, Form, Depends
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
 # Импорты базы данных и утилит
-from database import get_db
+from database import get_db, sync_schema
 from models import User, Order
 from utils import templates, RedirectException, require_login
 
 # Импорт наших новых роутеров
 from routers import director, colorist, manager
 
-app = FastAPI(title="Colorist CRM")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Подтягивает схему БД под текущие модели (новые таблицы/колонки),
+    # чтобы деплой без ручной миграции не ронял приложение при расхождении схемы.
+    sync_schema()
+    yield
+
+
+app = FastAPI(title="Colorist CRM", lifespan=lifespan)
 
 # Подключаем статику
 app.mount("/static", StaticFiles(directory="static"), name="static")
