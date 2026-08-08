@@ -10,7 +10,7 @@
         <span style="background: #ecf0f1; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; color: #34495e;">{{ order.status }}</span>
 
         <a href="/order/{{ order.id }}/print" target="_blank" style="background: #2c3e50; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; margin-left: auto;">🖨 Печать</a>
-        <a href="/director/orders" style="color: #7f8c8d; text-decoration: none; font-weight: bold; margin-left: 15px;">← Назад к списку</a>
+        <a href="javascript:history.back()" style="color: #7f8c8d; text-decoration: none; font-weight: bold; margin-left: 15px;">← Назад к списку</a>
     </div>
 
     <!-- Данные заказа -->
@@ -91,7 +91,7 @@
         </div>
     </div>
 
-    <!-- Блок фотографий (Фотоконтроль - Только просмотр, без кнопок загрузки) -->
+    <!-- Блок фотографий (Фотоконтроль - Только просмотр) -->
     <div style="margin-top: 30px;">
         <h3 style="color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px;">
             Фотоконтроль
@@ -109,8 +109,8 @@
             <div style="flex: 1; min-width: 250px; background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ecf0f1; box-sizing: border-box;">
                 <h4 style="margin-top: 0; color: #34495e; font-size: 14px;">1. Деталь ДО работы</h4>
                 {% if order.photo_detail %}
-                    <a href="/{{ order.photo_detail }}" target="_blank">
-                        <img src="/{{ order.photo_detail }}" alt="Деталь до" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                    <a href="/{{ order.photo_detail if not order.photo_detail.startswith('/') else order.photo_detail[1:] }}" target="_blank">
+                        <img src="/{{ order.photo_detail if not order.photo_detail.startswith('/') else order.photo_detail[1:] }}" alt="Деталь до" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
                     </a>
                 {% else %}
                     <div style="height: 180px; background: #ecf0f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #95a5a6; border: 2px dashed #bdc3c7; font-size: 13px;">Фото отсутствует</div>
@@ -124,8 +124,8 @@
                     {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}2. {% endif %}Краска на весах
                 </h4>
                 {% if order.photo_scales %}
-                    <a href="/{{ order.photo_scales }}" target="_blank">
-                        <img src="/{{ order.photo_scales }}" alt="Весы" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                    <a href="/{{ order.photo_scales if not order.photo_scales.startswith('/') else order.photo_scales[1:] }}" target="_blank">
+                        <img src="/{{ order.photo_scales if not order.photo_scales.startswith('/') else order.photo_scales[1:] }}" alt="Весы" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
                     </a>
                 {% else %}
                     <div style="height: 180px; background: #fff3e0; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #e67e22; border: 2px dashed #ffb74d; font-size: 13px;">Фото отсутствует</div>
@@ -137,8 +137,8 @@
             <div style="flex: 1; min-width: 250px; background: #e8f8f5; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #a3e4d7; box-sizing: border-box;">
                 <h4 style="margin-top: 0; color: #16a085; font-size: 14px;">3. Деталь ПОСЛЕ работы</h4>
                 {% if order.photo_after %}
-                    <a href="/{{ order.photo_after }}" target="_blank">
-                        <img src="/{{ order.photo_after }}" alt="Деталь после" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                    <a href="/{{ order.photo_after if not order.photo_after.startswith('/') else order.photo_after[1:] }}" target="_blank">
+                        <img src="/{{ order.photo_after if not order.photo_after.startswith('/') else order.photo_after[1:] }}" alt="Деталь после" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
                     </a>
                 {% else %}
                     <div style="height: 180px; background: #e0f2f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #1abc9c; border: 2px dashed #80cbc4; font-size: 13px;">Фото отсутствует</div>
