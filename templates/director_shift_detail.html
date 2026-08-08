@@ -34,10 +34,10 @@
 
             {% if start_photos_list %}
                 <div class="grid grid-cols-2 gap-3">
-                    <!-- ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ РАСПАКОВАННЫЙ СПИСОК -->
                     {% for photo_url in start_photos_list %}
-                    <a href="/{{ photo_url }}" target="_blank" class="block bg-gray-100 rounded-lg overflow-hidden border border-gray-200 aspect-square hover:opacity-90 transition relative group">
-                        <img src="/{{ photo_url }}" alt="Фото открытия" class="w-full h-full object-cover">
+                    {% set clean_url = photo_url[1:] if photo_url.startswith('/') else photo_url %}
+                    <a href="/{{ clean_url }}" target="_blank" class="block bg-gray-100 rounded-lg overflow-hidden border border-gray-200 aspect-square hover:opacity-90 transition relative group">
+                        <img src="/{{ clean_url }}" alt="Фото открытия" class="w-full h-full object-cover">
                         <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition flex items-center justify-center">
                             <span class="text-white opacity-0 group-hover:opacity-100 font-bold drop-shadow-md">🔍 Увеличить</span>
                         </div>
@@ -53,15 +53,19 @@
         <div class="bg-gray-50 p-5 rounded-xl border border-[#ecf0f1] shadow-sm">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-bold text-[#2c3e50]">ВЕЧЕР (Закрытие)</h3>
-                <span class="text-sm font-bold text-gray-500">{{ shift.end_time.strftime('%H:%M') if shift.end_time else 'Смена идет' }}</span>
+                {% if shift.end_time %}
+                    <span class="text-sm font-bold text-gray-500">{{ shift.end_time.strftime('%H:%M') }}</span>
+                {% else %}
+                    <span class="text-sm font-bold text-[#f39c12]">Смена идет</span>
+                {% endif %}
             </div>
 
             {% if end_photos_list %}
                 <div class="grid grid-cols-2 gap-3">
-                    <!-- ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ РАСПАКОВАННЫЙ СПИСОК -->
                     {% for photo_url in end_photos_list %}
-                    <a href="/{{ photo_url }}" target="_blank" class="block bg-gray-100 rounded-lg overflow-hidden border border-gray-200 aspect-square hover:opacity-90 transition relative group">
-                        <img src="/{{ photo_url }}" alt="Фото закрытия" class="w-full h-full object-cover">
+                    {% set clean_url = photo_url[1:] if photo_url.startswith('/') else photo_url %}
+                    <a href="/{{ clean_url }}" target="_blank" class="block bg-gray-100 rounded-lg overflow-hidden border border-gray-200 aspect-square hover:opacity-90 transition relative group">
+                        <img src="/{{ clean_url }}" alt="Фото закрытия" class="w-full h-full object-cover">
                         <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition flex items-center justify-center">
                             <span class="text-white opacity-0 group-hover:opacity-100 font-bold drop-shadow-md">🔍 Увеличить</span>
                         </div>
