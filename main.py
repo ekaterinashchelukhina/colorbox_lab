@@ -62,14 +62,11 @@ def login(
         token: str = Form(...),
         db: Session = Depends(get_db)
 ):
-    # 1. Защита от опечаток: отрезаем невидимые пробелы в начале и в конце
     clean_username = username.strip()
     clean_token = token.strip()
 
-    # 2. Выводим в терминал сервера то, что пришло из формы (для отладки)
     print(f"--- ПОПЫТКА ВХОДА --- Логин: [{clean_username}], Токен: [{clean_token}]")
 
-    # Авторизация по очищенным данным
     user = db.query(User).filter(
         User.username == clean_username,
         User.token == clean_token
@@ -82,8 +79,6 @@ def login(
             context={"error_message": "Неверный логин или токен доступа"}
         )
 
-    response = HTMLResponse()
-
     user_role = user.role.lower() if user.role else ""
     if user_role == "директор":
         redirect_url = "/director"
@@ -92,10 +87,7 @@ def login(
     else:
         redirect_url = "/dashboard"
 
-    # Классический редирект
     response = RedirectResponse(url=redirect_url, status_code=303)
-
-    # Устанавливаем токен в куки
     response.set_cookie(key="access_token", value=clean_token, httponly=True)
 
     return response
@@ -103,7 +95,6 @@ def login(
 
 @app.get("/logout")
 def logout(request: Request, db: Session = Depends(get_db)):
-    # При выходе токен в базе не стираем, так как это постоянный ключ доступа сотрудника
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("access_token")
     return response
@@ -121,10 +112,7 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     if user.role and user.role.lower() == "директор":
         return RedirectResponse(url="/director", status_code=303)
 
-    # Получаем все заказы филиала из базы
     all_orders = db.query(Order).filter(Order.branch_id == user.branch_id).order_by(Order.created_at.desc()).all()
-
-    # Изменено: заказ уходит в архив сразу при статусе "Выдано"
     orders = [o for o in all_orders if o.status != "Выдано"]
 
     return templates.TemplateResponse(
@@ -150,13 +138,11 @@ def colorist_dashboard(request: Request, db: Session = Depends(get_db)):
     if not user.role or user.role.lower() != "колорист":
         return RedirectResponse(url="/dashboard", status_code=303)
 
-    # Ищем активную смену (где есть время начала, но нет времени конца)
     active_shift = db.query(Shift).filter(
         Shift.user_id == user.id,
         Shift.end_time == None
     ).first()
 
-    # Заказы загружаются только если смена открыта
     orders = []
     if active_shift:
         orders = db.query(Order).filter(
@@ -260,18 +246,14 @@ def view_archive(
 
     filter_branch = int(branch_id) if branch_id and branch_id.isdigit() else None
 
-    # Изменено: в архив попадает всё, у чего статус "Выдано"
     query = db.query(Order).filter(Order.status == "Выдано")
 
-    # Применяем фильтры в зависимости от роли
     if user_role == "Директор":
         if filter_branch:
             query = query.filter(Order.branch_id == filter_branch)
     else:
-        # Менеджеры и колористы видят архив только своего филиала
         query = query.filter(Order.branch_id == user_branch_id)
 
-    # Сортируем от новых к старым и получаем результат
     archived_orders = query.order_by(Order.created_at.desc()).all()
 
     return templates.TemplateResponse(
@@ -309,7 +291,6 @@ def create_order(
     if not manager:
         return RedirectResponse(url="/", status_code=303)
 
-    # ЗАЩИТА ОТ СОЗДАНИЯ ЗАКАЗОВ БЕЗ ФИЛИАЛА
     if not manager.branch_id:
         return HTMLResponse("""
         <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
@@ -420,7 +401,6 @@ def update_order_status(
 
     order = db.query(Order).filter(Order.id == order_id).first()
     if order:
-        # ЗАПИСЫВАЕМ КОЛОРИСТА
         if user.role and user.role.lower() == "колорист":
             order.colorist_id = user.id
 
@@ -549,7 +529,7 @@ def delete_recipe_item(
 def update_order_finance(
         request: Request,
         order_id: int,
-        price: str = Form("0"),  # Принимаем как строку, чтобы обработать запятые
+        price: str = Form("0"),
         is_paid: str = Form(None),
         db: Session = Depends(get_db)
 ):
@@ -560,7 +540,6 @@ def update_order_finance(
     order = db.query(Order).filter(Order.id == order_id).first()
     if order:
         try:
-            # Безопасно заменяем запятую на точку и преобразуем в float
             clean_price = float(price.replace(",", "."))
         except ValueError:
             clean_price = 0.0
@@ -626,7 +605,6 @@ def director_dashboard(request: Request, branch_id: Optional[str] = None, db: Se
 
     current_branch = None
 
-    # Безопасно проверяем, пришло ли реальное число в строке выбора
     if branch_id and branch_id.isdigit():
         b_id = int(branch_id)
         query = query.filter(Order.branch_id == b_id)
@@ -637,7 +615,8 @@ def director_dashboard(request: Request, branch_id: Optional[str] = None, db: Se
     orders = [o for o in all_orders if not (o.status == "Выдано" and o.is_paid == True)]
     shifts = shifts_query.all()
 
-    total_revenue = sum(o.price for o in orders if o.is_paid)
+    # Исправлено: теперь выручка корректно суммируется для заказов со статусом "Выдано" или полем is_paid == True
+    total_revenue = sum(o.price for o in orders if o.price and (o.is_paid or o.status == "Выдано"))
     total_paint_volume = sum(o.actual_volume for o in orders if o.actual_volume is not None)
     total_reworks = sum(o.rework_count for o in orders)
     active_orders = len([o for o in orders if o.status not in ["Готово", "Выдано"]])
@@ -735,7 +714,6 @@ def print_shifts_report(request: Request, branch_id: Optional[int] = None, db: S
     if not user.role or user.role.lower() != "директор":
         return RedirectResponse(url="/dashboard", status_code=303)
 
-    # В ОТЧЕТ выводим ТОЛЬКО ЗАВЕРШЕННЫЕ смены (где end_time != None)
     shifts_query = db.query(Shift).filter(Shift.end_time != None).order_by(Shift.start_time.desc())
     if branch_id:
         shifts_query = shifts_query.filter(Shift.branch_id == branch_id)
@@ -843,10 +821,7 @@ def delete_user(
         if target_user.id == current_user.id:
             return HTMLResponse("Ошибка: Нельзя удалить собственную учетную запись директора.")
 
-        # Сначала удаляем все связанные смены этого пользователя
         db.query(Shift).filter(Shift.user_id == user_id).delete()
-
-        # Затем удаляем самого пользователя
         db.delete(target_user)
         db.commit()
 
