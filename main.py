@@ -606,7 +606,7 @@ def view_client(request: Request, client_id: int, db: Session = Depends(get_db))
 # ==========================================
 
 @app.get("/director")
-def director_dashboard(request: Request, branch_id: Optional[int] = None, db: Session = Depends(get_db)):
+def director_dashboard(request: Request, branch_id: Optional[str] = None, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/", status_code=303)
@@ -617,7 +617,6 @@ def director_dashboard(request: Request, branch_id: Optional[int] = None, db: Se
     branches = db.query(Branch).all()
     query = db.query(Order).order_by(Order.created_at.desc())
 
-    # Исключаем удаленных сотрудников из смен
     shifts_query = (
         db.query(Shift)
         .join(User)
@@ -627,44 +626,41 @@ def director_dashboard(request: Request, branch_id: Optional[int] = None, db: Se
 
     current_branch = None
 
-    if branch_id:
-        query = query.filter(Order.branch_id == branch_id)
-        shifts_query = shifts_query.filter(Shift.branch_id == branch_id)
-        current_branch = db.query(Branch).filter(Branch.id == branch_id).first()
+    # Безопасно проверяем, пришло ли реальное число в строке выбора
+    if branch_id and branch_id.isdigit():
+        b_id = int(branch_id)
+        query = query.filter(Order.branch_id == b_id)
+        shifts_query = shifts_query.filter(Shift.branch_id == b_id)
+        current_branch = db.query(Branch).filter(Branch.id == b_id).first()
 
-    # ВСЕ заказы филиала (нужны для честной аналитики и выручки по оплаченным)
     all_orders = query.all()
-
+    orders = [o for o in all_orders if not (o.status == "Выдано" and o.is_paid == True)]
     shifts = shifts_query.all()
 
-    # Считаем финансы и объем по ВСЕМ заказам сети (включая архивные, раз они оплачены)
-    total_revenue = sum(o.price for o in all_orders if o.is_paid)
-    total_paint_volume = sum(o.actual_volume for o in all_orders if o.actual_volume is not None)
-    total_reworks = sum(o.rework_count for o in all_orders)
-
-    # А для отображения на экране оставляем только те, что еще не выданы
-    active_dashboard_orders = [o for o in all_orders if o.status != "Выдано"]
-    active_orders_count = len([o for o in active_dashboard_orders if o.status not in ["Готово", "Выдано"]])
+    total_revenue = sum(o.price for o in orders if o.is_paid)
+    total_paint_volume = sum(o.actual_volume for o in orders if o.actual_volume is not None)
+    total_reworks = sum(o.rework_count for o in orders)
+    active_orders = len([o for o in orders if o.status not in ["Готово", "Выдано"]])
 
     return templates.TemplateResponse(
         request=request,
         name="director_dashboard.html",
         context={
             "username": user.username,
-            "orders": active_dashboard_orders,
+            "orders": orders,
             "shifts": shifts,
             "branches": branches,
             "current_branch": current_branch,
             "total_revenue": total_revenue,
             "total_paint_volume": round(total_paint_volume, 1),
             "total_reworks": total_reworks,
-            "active_orders": active_orders_count
+            "active_orders": active_orders
         }
     )
 
 
 @app.get("/director/orders")
-def director_active_orders(request: Request, branch_id: Optional[int] = None, db: Session = Depends(get_db)):
+def director_active_orders(request: Request, branch_id: Optional[str] = None, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/", status_code=303)
@@ -676,14 +672,13 @@ def director_active_orders(request: Request, branch_id: Optional[int] = None, db
     query = db.query(Order).order_by(Order.created_at.desc())
 
     current_branch = None
-    if branch_id:
-        query = query.filter(Order.branch_id == branch_id)
-        current_branch = db.query(Branch).filter(Branch.id == branch_id).first()
+    if branch_id and branch_id.isdigit():
+        b_id = int(branch_id)
+        query = query.filter(Order.branch_id == b_id)
+        current_branch = db.query(Branch).filter(Branch.id == b_id).first()
 
     all_orders = query.all()
-
-    # Изменено: отсеиваем выданные
-    active_orders = [o for o in all_orders if o.status != "Выдано"]
+    active_orders = [o for o in all_orders if not (o.status == "Выдано" and o.is_paid == True)]
 
     return templates.TemplateResponse(
         request=request,
