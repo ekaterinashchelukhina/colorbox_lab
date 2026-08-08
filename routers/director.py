@@ -1,4 +1,6 @@
 import secrets
+import json
+import ast
 from typing import Optional
 from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse
@@ -161,7 +163,114 @@ def delete_user(request: Request, user_id: int, db: Session = Depends(get_db)):
     if target_user:
         if target_user.id == current_user.id:
             return HTMLResponse("Ошибка: Нельзя удалить собственную учетную запись.")
+
+        # Отвязываем колориста от старых заказов
+        db.query(Order).filter(Order.colorist_id == user_id).update({"colorist_id": None})
+
+        # Удаляем смены сотрудника
         db.query(Shift).filter(Shift.user_id == user_id).delete()
+
+        # Безопасно удаляем пользователя
         db.delete(target_user)
         db.commit()
     return RedirectResponse(url="/director/users?success=user_delete", status_code=303)
+
+
+@router.get("/shifts")
+def director_shifts_list(request: Request, branch_id: Optional[str] = None, db: Session = Depends(get_db)):
+    """Список всех смен для директора"""
+    user = get_current_user(request, db)
+    if not user or (user.role and user.role.lower() != "директор"):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    branches = db.query(Branch).all()
+    query = db.query(Shift).order_by(Shift.start_time.desc())
+
+    current_branch = None
+    if branch_id and branch_id.isdigit():
+        b_id = int(branch_id)
+        query = query.filter(Shift.branch_id == b_id)
+        current_branch = db.query(Branch).filter(Branch.id == b_id).first()
+
+    shifts = query.all()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="director_shifts.html",
+        context={
+            "shifts": shifts,
+            "branches": branches,
+            "current_branch": current_branch
+        }
+    )
+
+
+@router.get("/shift/{shift_id}")
+def director_shift_detail(request: Request, shift_id: int, db: Session = Depends(get_db)):
+    """Детальный просмотр фотографий конкретной смены"""
+    user = get_current_user(request, db)
+    if not user or (user.role and user.role.lower() != "директор"):
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    shift = db.query(Shift).filter(Shift.id == shift_id).first()
+    if not shift:
+        return RedirectResponse(url="/director/shifts", status_code=303)
+
+    # Умная функция для распаковки любых данных в список
+    def parse_photos(photo_data):
+        if not photo_data:
+            return []
+        if isinstance(photo_data, list):
+            return photo_data
+        if isinstance(photo_data, str):
+            # Пробуем как JSON
+            try:
+                parsed = json.loads(photo_data)
+                return parsed if isinstance(parsed, list) else [str(parsed)]
+            except json.JSONDecodeError:
+                pass
+            # Пробуем как Python-строку (если база сохранила как "['file.jpg']")
+            try:
+                parsed = ast.literal_eval(photo_data)
+                if isinstance(parsed, list):
+                    return parsed
+            except Exception:
+                pass
+            # Если это просто один путь текстом
+            return [photo_data]
+        return []
+
+    start_photos_list = parse_photos(shift.start_photos)
+    end_photos_list = parse_photos(shift.end_photos)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="director_shift_detail.html",
+        context={
+            "shift": shift,
+            "start_photos_list": start_photos_list,
+            "end_photos_list": end_photos_list
+        }
+    )
+
+
+@router.get("/fix-orders")
+def fix_orphaned_orders(db: Session = Depends(get_db)):
+    """
+    Временный роут для починки тестовой базы данных.
+    Привязывает все "осиротевшие" заказы к филиалу Уфа (ID=2).
+    """
+    # Находим все заказы, у которых branch_id не равен 2 (включая None)
+    orphaned_orders = db.query(Order).filter(
+        (Order.branch_id != 2) | (Order.branch_id == None)
+    ).all()
+
+    for order in orphaned_orders:
+        order.branch_id = 2
+
+    db.commit()
+
+    return HTMLResponse(
+        "<h2>Все заказы успешно привязаны к филиалу Уфа!</h2>"
+        "<a href='/director?branch_id=2'>Вернуться на панель директора</a>"
+    )

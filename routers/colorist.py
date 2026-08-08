@@ -1,4 +1,5 @@
 import os
+import json
 from datetime import datetime, timezone
 from typing import List
 
@@ -11,6 +12,7 @@ from models import Order, Shift
 from utils import get_current_user, compress_and_save_image, templates, UPLOAD_DIR
 
 router = APIRouter()
+
 
 @router.get("/colorist")
 def colorist_dashboard(request: Request, db: Session = Depends(get_db)):
@@ -34,6 +36,21 @@ def colorist_dashboard(request: Request, db: Session = Depends(get_db)):
         "username": user.username, "active_shift": active_shift, "orders": orders
     })
 
+
+# Новый маршрут для отдельной страницы закрытия смены
+@router.get("/shift/end-screen")
+def end_shift_screen(request: Request, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user or not user.role or user.role.lower() != "колорист":
+        return RedirectResponse(url="/", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="end_shift.html",
+        context={"username": user.username}
+    )
+
+
 @router.post("/shift/start")
 def start_shift(request: Request, photos: List[UploadFile] = File(...), db: Session = Depends(get_db)):
     user = get_current_user(request, db)
@@ -46,12 +63,15 @@ def start_shift(request: Request, photos: List[UploadFile] = File(...), db: Sess
             filename = f"{user.id}_start_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.jpg"
             file_path = os.path.join(UPLOAD_DIR, filename)
             compress_and_save_image(photo, file_path)
-            saved_files.append(f"/{file_path}")
+            # Убираем начальный слеш, чтобы не ломать пути, и заменяем слеши для универсальности
+            saved_files.append(file_path.replace("\\", "/"))
 
-    new_shift = Shift(user_id=user.id, branch_id=user.branch_id, start_photos=",".join(saved_files))
+    # Сохраняем как правильный JSON-список!
+    new_shift = Shift(user_id=user.id, branch_id=user.branch_id, start_photos=json.dumps(saved_files))
     db.add(new_shift)
     db.commit()
     return RedirectResponse(url="/colorist", status_code=303)
+
 
 @router.post("/shift/end")
 def end_shift(request: Request, photos: List[UploadFile] = File(...), db: Session = Depends(get_db)):
@@ -67,10 +87,11 @@ def end_shift(request: Request, photos: List[UploadFile] = File(...), db: Sessio
                 filename = f"{user.id}_end_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.jpg"
                 file_path = os.path.join(UPLOAD_DIR, filename)
                 compress_and_save_image(photo, file_path)
-                saved_files.append(f"/{file_path}")
+                saved_files.append(file_path.replace("\\", "/"))
 
         active_shift.end_time = datetime.now(timezone.utc)
-        active_shift.end_photos = ",".join(saved_files)
+        # Сохраняем как правильный JSON-список!
+        active_shift.end_photos = json.dumps(saved_files)
         db.commit()
 
     return RedirectResponse(url="/colorist", status_code=303)

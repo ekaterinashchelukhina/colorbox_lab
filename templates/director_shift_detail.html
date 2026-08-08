@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Детали смены #{{ shift.id }} - ColorBox Lab{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6 w-full max-w-6xl mx-auto">
+
+    <!-- Шапка -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-2 border-[#ecf0f1] pb-4">
+        <div>
+            <h2 class="text-2xl font-bold text-[#2c3e50] flex items-center gap-2 m-0">
+                Смена #{{ shift.id }}
+            </h2>
+            <div class="text-sm text-[#7f8c8d] mt-1 font-bold">
+                Колорист: <span class="text-[#3498db]">{{ shift.user.username if shift.user else '—' }}</span> |
+                Филиал: {{ shift.branch.name if shift.branch else '—' }}
+            </div>
+        </div>
+
+        <a href="/director/shifts" class="bg-[#7f8c8d] hover:bg-[#34495e] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors text-center w-full sm:w-auto">
+            ← Назад к журналу
+        </a>
+    </div>
+
+    <!-- Сетка Было / Стало -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+        <!-- ЛЕВАЯ КОЛОНКА: ОТКРЫТИЕ -->
+        <div class="bg-white p-5 rounded-xl border border-[#ecf0f1] shadow-sm">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-bold text-[#2c3e50]">УТРО (Открытие)</h3>
+                <span class="text-sm font-bold text-gray-500">{{ shift.start_time.strftime('%H:%M') if shift.start_time else '—' }}</span>
+            </div>
+
+            {% if start_photos_list %}
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ РАСПАКОВАННЫЙ СПИСОК -->
+                    {% for photo_url in start_photos_list %}
+                    <a href="/{{ photo_url }}" target="_blank" class="block bg-gray-100 rounded-lg overflow-hidden border border-gray-200 aspect-square hover:opacity-90 transition relative group">
+                        <img src="/{{ photo_url }}" alt="Фото открытия" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition flex items-center justify-center">
+                            <span class="text-white opacity-0 group-hover:opacity-100 font-bold drop-shadow-md">🔍 Увеличить</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-12 text-gray-400 font-bold bg-gray-50 rounded-lg border border-dashed border-gray-300">Фотографии отсутствуют</div>
+            {% endif %}
+        </div>
+
+        <!-- ПРАВАЯ КОЛОНКА: ЗАКРЫТИЕ -->
+        <div class="bg-gray-50 p-5 rounded-xl border border-[#ecf0f1] shadow-sm">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-lg font-bold text-[#2c3e50]">ВЕЧЕР (Закрытие)</h3>
+                <span class="text-sm font-bold text-gray-500">{{ shift.end_time.strftime('%H:%M') if shift.end_time else 'Смена идет' }}</span>
+            </div>
+
+            {% if end_photos_list %}
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- ИСПОЛЬЗУЕМ ПРАВИЛЬНЫЙ РАСПАКОВАННЫЙ СПИСОК -->
+                    {% for photo_url in end_photos_list %}
+                    <a href="/{{ photo_url }}" target="_blank" class="block bg-gray-100 rounded-lg overflow-hidden border border-gray-200 aspect-square hover:opacity-90 transition relative group">
+                        <img src="/{{ photo_url }}" alt="Фото закрытия" class="w-full h-full object-cover">
+                        <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition flex items-center justify-center">
+                            <span class="text-white opacity-0 group-hover:opacity-100 font-bold drop-shadow-md">🔍 Увеличить</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            {% elif not shift.end_time %}
+                <div class="text-center py-12 text-[#f39c12] font-bold bg-yellow-50 rounded-lg border border-dashed border-yellow-300">
+                    Смена еще не закрыта<br><span class="text-sm text-gray-500 font-normal">Фотографии появятся после завершения дня</span>
+                </div>
+            {% else %}
+                <div class="text-center py-12 text-gray-400 font-bold bg-gray-100 rounded-lg border border-dashed border-gray-300">Фотографии отсутствуют</div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

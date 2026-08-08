@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Закрытие смены - ColorBox Lab{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-6 w-full max-w-3xl mx-auto">
+
+    <!-- Шапка -->
+    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b-2 border-[#ecf0f1] gap-3">
+        <h2 class="text-[#2c3e50] text-2xl font-bold m-0 flex items-center gap-2">
+            🏁 Закрытие смены
+        </h2>
+        <a href="/colorist" class="bg-[#7f8c8d] hover:bg-[#34495e] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors text-center w-full sm:w-auto">
+            ← Вернуться к заказам
+        </a>
+    </div>
+
+    <!-- Форма фотографий -->
+    <div class="bg-white p-5 sm:p-8 rounded-xl border border-[#ecf0f1] shadow-sm text-center">
+        <h4 class="text-[#e74c3c] font-bold text-xl mb-2">Сдача лаборатории</h4>
+        <p class="text-[#7f8c8d] text-sm mb-6 max-w-md mx-auto">
+            Для завершения работы зафиксируйте порядок. Требуются 4 итоговые фотографии чистого рабочего места.
+        </p>
+
+        <!-- Обратите внимание: form action остался прежним (/shift/end) -->
+        <form action="/shift/end" method="post" enctype="multipart/form-data" class="flex flex-col gap-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label class="photo-label flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-gray-50 rounded-xl p-5 cursor-pointer transition-colors">
+                    <span class="text-[#2c3e50] font-bold text-sm text-center mb-2">Рабочий стол<br><span class="text-xs font-normal text-gray-500">(Итог)</span></span>
+                    <span class="status-icon text-xs font-bold bg-gray-200 text-gray-600 px-3 py-1 rounded-full">📸 Открыть камеру</span>
+                    <input type="file" name="photos" accept="image/*" capture="environment" required id="e_p1" class="hidden">
+                </label>
+
+                <label class="photo-label flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-gray-50 rounded-xl p-5 cursor-pointer transition-colors">
+                    <span class="text-[#2c3e50] font-bold text-sm text-center mb-2">Вытяжной шкаф<br><span class="text-xs font-normal text-gray-500">(Итог)</span></span>
+                    <span class="status-icon text-xs font-bold bg-gray-200 text-gray-600 px-3 py-1 rounded-full">📸 Открыть камеру</span>
+                    <input type="file" name="photos" accept="image/*" capture="environment" required id="e_p2" class="hidden">
+                </label>
+
+                <label class="photo-label flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-gray-50 rounded-xl p-5 cursor-pointer transition-colors">
+                    <span class="text-[#2c3e50] font-bold text-sm text-center mb-2">Стойка<br><span class="text-xs font-normal text-gray-500">(Итог)</span></span>
+                    <span class="status-icon text-xs font-bold bg-gray-200 text-gray-600 px-3 py-1 rounded-full">📸 Открыть камеру</span>
+                    <input type="file" name="photos" accept="image/*" capture="environment" required id="e_p3" class="hidden">
+                </label>
+
+                <label class="photo-label flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-gray-50 rounded-xl p-5 cursor-pointer transition-colors">
+                    <span class="text-[#2c3e50] font-bold text-sm text-center mb-2">Общий вид<br><span class="text-xs font-normal text-gray-500">(Итог)</span></span>
+                    <span class="status-icon text-xs font-bold bg-gray-200 text-gray-600 px-3 py-1 rounded-full">📸 Открыть камеру</span>
+                    <input type="file" name="photos" accept="image/*" capture="environment" required id="e_p4" class="hidden">
+                </label>
+            </div>
+
+            <button type="submit" id="end-btn" class="w-full bg-gray-300 text-gray-500 font-bold py-4 rounded-xl transition-colors text-lg shadow-sm cursor-not-allowed mt-2" disabled>
+                Сделайте все 4 фото
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function setupStrictPhotoValidation(inputIds, btnId, btnActiveText) {
+        const inputs = inputIds.map(id => document.getElementById(id));
+        const submitBtn = document.getElementById(btnId);
+        if (!submitBtn) return;
+
+        function checkAllPhotos() {
+            let allFilled = true;
+            inputs.forEach(input => {
+                if (!input) return;
+                const label = input.closest('.photo-label');
+                const statusIcon = label.querySelector('.status-icon');
+                
+                if (input.files && input.files.length > 0) {
+                    label.classList.remove('border-gray-300', 'bg-gray-50');
+                    label.classList.add('border-green-500', 'bg-green-50');
+                    statusIcon.classList.remove('bg-gray-200', 'text-gray-600');
+                    statusIcon.classList.add('bg-green-500', 'text-white');
+                    statusIcon.innerText = "✅ Снято";
+                } else {
+                    allFilled = false;
+                    label.classList.add('border-gray-300', 'bg-gray-50');
+                    label.classList.remove('border-green-500', 'bg-green-50');
+                    statusIcon.classList.add('bg-gray-200', 'text-gray-600');
+                    statusIcon.classList.remove('bg-green-500', 'text-white');
+                    statusIcon.innerText = "📸 Открыть камеру";
+                }
+            });
+
+            if (allFilled) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                submitBtn.classList.add('bg-[#e74c3c]', 'hover:bg-[#c0392b]', 'text-white', 'cursor-pointer');
+                submitBtn.innerText = btnActiveText;
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+                submitBtn.classList.remove('bg-[#e74c3c]', 'hover:bg-[#c0392b]', 'text-white', 'cursor-pointer');
+                submitBtn.innerText = "Сделайте все 4 фото";
+            }
+        }
+
+        inputs.forEach(input => {
+            if (input) input.addEventListener('change', checkAllPhotos);
+        });
+    }
+
+    // Запускаем только для закрытия смены
+    setupStrictPhotoValidation(['e_p1', 'e_p2', 'e_p3', 'e_p4'], 'end-btn', 'Закончить смену');
+</script>
+{% endblock %}

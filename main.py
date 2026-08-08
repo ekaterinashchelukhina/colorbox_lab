@@ -74,3 +74,17 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
         "username": user.username,
         "orders": orders
     })
+
+
+@app.get("/shift/end-screen")
+def end_shift_screen(request: Request, db: Session = Depends(get_db)):
+    # Проверяем, авторизован ли колорист
+    user = get_current_user(request, db)
+    if not user or (user.role and user.role.lower() != "колорист"):
+        return RedirectResponse(url="/", status_code=303)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="end_shift.html",
+        context={"username": user.username}
+    )
