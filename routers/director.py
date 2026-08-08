@@ -32,15 +32,7 @@ def _apply_shift_filters(query, branch_id, colorist_id, date_from, date_to):
     return query
 
 
-@router.get("")
-def director_dashboard(request: Request, branch_id: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user:
-        return RedirectResponse(url="/", status_code=303)
-    if not user.role or user.role.lower() != "директор":
-        return RedirectResponse(url="/dashboard", status_code=303)
-
-    branches = db.query(Branch).all()
+def _director_dashboard_stats(db: Session, branch_id: Optional[str]):
     query = db.query(Order).order_by(Order.created_at.desc())
     shifts_query = db.query(Shift).join(User).filter(Shift.end_time == None).order_by(Shift.start_time.desc())
 
@@ -70,12 +62,43 @@ def director_dashboard(request: Request, branch_id: Optional[str] = None, db: Se
     total_reworks = rework_query.filter(*branch_filter).count()
     active_orders = len([o for o in orders if o.status not in ["Готово", "Выдано"]])
 
-    return templates.TemplateResponse(request=request, name="director_dashboard.html", context={
-        "username": user.username, "orders": orders, "shifts": shifts,
-        "branches": branches, "current_branch": current_branch,
+    return {
+        "orders": orders, "shifts": shifts, "current_branch": current_branch,
         "total_revenue": total_revenue, "total_paint_volume": round(total_paint_volume, 1),
-        "total_reworks": total_reworks, "active_orders": active_orders
+        "total_reworks": total_reworks, "active_orders": active_orders,
+    }
+
+
+@router.get("")
+def director_dashboard(request: Request, branch_id: Optional[str] = None, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+    if not user.role or user.role.lower() != "директор":
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    branches = db.query(Branch).all()
+    stats = _director_dashboard_stats(db, branch_id)
+
+    return templates.TemplateResponse(request=request, name="director_dashboard.html", context={
+        "username": user.username, "orders": stats["orders"], "shifts": stats["shifts"],
+        "branches": branches, "current_branch": stats["current_branch"],
+        "total_revenue": stats["total_revenue"], "total_paint_volume": stats["total_paint_volume"],
+        "total_reworks": stats["total_reworks"], "active_orders": stats["active_orders"],
     })
+
+
+@router.get("/stats")
+def director_dashboard_stats(branch_id: Optional[str] = None, db: Session = Depends(get_db),
+                             user: User = Depends(require_director)):
+    """Лёгкий JSON-снимок сводки для авто-обновления счётчиков на панели без перезагрузки страницы."""
+    stats = _director_dashboard_stats(db, branch_id)
+    return {
+        "total_revenue": stats["total_revenue"],
+        "total_paint_volume": stats["total_paint_volume"],
+        "total_reworks": stats["total_reworks"],
+        "active_orders": stats["active_orders"],
+    }
 
 
 @router.get("/orders")

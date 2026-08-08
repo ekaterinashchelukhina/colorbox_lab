@@ -28,21 +28,21 @@
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white p-4 sm:p-5 rounded-xl border border-[#ecf0f1] shadow-sm flex flex-col justify-center">
             <div class="text-xs text-[#7f8c8d] font-bold uppercase tracking-wide mb-1">Выручка</div>
-            <div class="text-xl sm:text-2xl font-bold text-green-600">{{ total_revenue }} ₽</div>
+            <div class="text-xl sm:text-2xl font-bold text-green-600"><span id="stat-revenue">{{ total_revenue }}</span> ₽</div>
         </div>
         <div class="bg-white p-4 sm:p-5 rounded-xl border border-[#ecf0f1] shadow-sm flex flex-col justify-center">
             <div class="text-xs text-[#7f8c8d] font-bold uppercase tracking-wide mb-1">Объем краски</div>
             <div class="text-xl sm:text-2xl font-bold text-[#3498db]">
-                {{ "%.1f"|format(total_paint_volume) }} л.
+                <span id="stat-volume">{{ "%.1f"|format(total_paint_volume) }}</span> л.
             </div>
         </div>
         <div class="bg-white p-4 sm:p-5 rounded-xl border border-[#ecf0f1] shadow-sm flex flex-col justify-center">
             <div class="text-xs text-[#7f8c8d] font-bold uppercase tracking-wide mb-1">Доколеровка</div>
-            <div class="text-xl sm:text-2xl font-bold text-[#e74c3c]">{{ total_reworks }}</div>
+            <div class="text-xl sm:text-2xl font-bold text-[#e74c3c]" id="stat-reworks">{{ total_reworks }}</div>
         </div>
         <div class="bg-white p-4 sm:p-5 rounded-xl border border-[#ecf0f1] shadow-sm flex flex-col justify-center">
             <div class="text-xs text-[#7f8c8d] font-bold uppercase tracking-wide mb-1">В работе</div>
-            <div class="text-xl sm:text-2xl font-bold text-[#2c3e50]">{{ active_orders }}</div>
+            <div class="text-xl sm:text-2xl font-bold text-[#2c3e50]" id="stat-active">{{ active_orders }}</div>
         </div>
     </div>
 
@@ -134,4 +134,28 @@
     </div>
 
 </div>
+
+<!-- Авто-обновление сводки (выручка, объем, доколеровка, в работе) без перезагрузки страницы -->
+<script>
+    (function () {
+        const branchId = "{{ current_branch.id if current_branch else '' }}";
+        const revenueEl = document.getElementById('stat-revenue');
+        const volumeEl = document.getElementById('stat-volume');
+        const reworksEl = document.getElementById('stat-reworks');
+        const activeEl = document.getElementById('stat-active');
+
+        function refreshStats() {
+            const url = '/director/stats' + (branchId ? ('?branch_id=' + encodeURIComponent(branchId)) : '');
+            fetch(url).then(function (r) { return r.ok ? r.json() : null; }).then(function (data) {
+                if (!data) return;
+                revenueEl.textContent = data.total_revenue;
+                volumeEl.textContent = data.total_paint_volume.toFixed(1);
+                reworksEl.textContent = data.total_reworks;
+                activeEl.textContent = data.active_orders;
+            }).catch(function () {});
+        }
+
+        setInterval(refreshStats, 10000);
+    })();
+</script>
 {% endblock %}
