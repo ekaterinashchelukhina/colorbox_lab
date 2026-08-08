@@ -42,14 +42,13 @@
                 <td>{{ shift.branch.name if shift.branch else "—" }}</td>
                 <td>
                     {{ shift.start_time.strftime('%d.%m.%Y %H:%M') }}
-                    {% if shift.start_photos %}
+                    {% if shift.start_photos_list %}
                         <div class="photo-container">
-                            {% for p in shift.start_photos.split(',') %}
-                                {% if p.strip() %}
-                                <a href="{{ p.strip() }}" target="_blank" title="Открыть фото старта">
-                                    <img src="{{ p.strip() }}" class="photo-thumb" alt="Старт" />
+                            {% for p in shift.start_photos_list %}
+                                {% set clean_url = p[1:] if p.startswith('/') else p %}
+                                <a href="/{{ clean_url }}" target="_blank" title="Открыть фото старта">
+                                    <img src="/{{ clean_url }}" class="photo-thumb" alt="Старт" />
                                 </a>
-                                {% endif %}
                             {% endfor %}
                         </div>
                     {% endif %}
@@ -57,14 +56,13 @@
                 <td>
                     {% if shift.end_time %}
                         {{ shift.end_time.strftime('%d.%m.%Y %H:%M') }}
-                        {% if shift.end_photos %}
+                        {% if shift.end_photos_list %}
                             <div class="photo-container">
-                                {% for p in shift.end_photos.split(',') %}
-                                    {% if p.strip() %}
-                                    <a href="{{ p.strip() }}" target="_blank" title="Открыть фото конца">
-                                        <img src="{{ p.strip() }}" class="photo-thumb" alt="Конец" />
+                                {% for p in shift.end_photos_list %}
+                                    {% set clean_url = p[1:] if p.startswith('/') else p %}
+                                    <a href="/{{ clean_url }}" target="_blank" title="Открыть фото конца">
+                                        <img src="/{{ clean_url }}" class="photo-thumb" alt="Конец" />
                                     </a>
-                                    {% endif %}
                                 {% endfor %}
                             </div>
                         {% endif %}

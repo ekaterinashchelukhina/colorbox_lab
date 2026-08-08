@@ -21,7 +21,7 @@
             <p style="margin: 8px 0;"><strong>Деталь:</strong> {{ order.detail }}</p>
             <p style="margin: 8px 0;"><strong>Тип услуги:</strong> <span style="background: #8e44ad; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">{{ order.service_type }}</span></p>
             <p style="margin: 12px 0 8px 0;"><strong>Код краски:</strong> <span style="font-size: 18px; color: #e74c3c; font-weight: bold;">{{ order.paint_code }}</span></p>
-            <p style="margin: 8px 0;"><strong>Требуемый объем:</strong> {{ order.target_volume }} л</p>
+            <p style="margin: 8px 0;"><strong>Требуемый объем:</strong> {{ order.target_volume }} мл</p>
             {% if order.actual_volume %}
             <p style="margin: 8px 0; color: #27ae60;"><strong>Фактический объем:</strong> {{ order.actual_volume }} г</p>
             {% endif %}

@@ -31,7 +31,7 @@
         <hr class="opacity-25 my-2">
         <p class="mb-1 small"><strong>Автомобиль:</strong> {{ order.car }}</p>
         <p class="mb-1 small"><strong>Деталь:</strong> {{ order.detail }}</p>
-        <p class="mb-0 small text-primary fw-bold"><strong>Целевой объем:</strong> {{ order.target_volume }} л.</p>
+        <p class="mb-0 small text-primary fw-bold"><strong>Целевой объем:</strong> {{ order.target_volume }} мл.</p>
     </div>
 
     <!-- Фотоконтроль (отдельные формы для мгновенной загрузки) -->
@@ -58,7 +58,7 @@
         <!-- Фото Лючка/Детали (после) -->
         {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}
         <div class="card shadow-sm border-0 rounded-4 p-3">
-            <span class="fw-bold mb-2">2. Тест-напыл (Лючок)</span>
+            <span class="fw-bold mb-2">2. Образец после работы</span>
             {% if order.photo_after %}
                 <img src="{{ order.photo_after }}" class="photo-preview mb-2">
                 <span class="text-success small fw-bold">✅ Загружено</span>
@@ -66,7 +66,7 @@
                 <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="after">
                     <label class="d-block upload-zone p-2 rounded-3 mb-2">
-                        <span class="d-block small text-dark fw-bold py-2">📸 Сделать фото напыла</span>
+                        <span class="d-block small text-dark fw-bold py-2">📸 Сделать фото образца после работы</span>
                         <input type="file" name="file" accept="image/*" capture="environment" required style="display: none;" onchange="this.form.submit()">
                     </label>
                 </form>

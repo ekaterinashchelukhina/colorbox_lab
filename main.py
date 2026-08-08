@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 # Импорты базы данных и утилит
 from database import get_db
 from models import User, Order
-from utils import get_current_user, templates
+from utils import templates, RedirectException, require_login
 
 # Импорт наших новых роутеров
 from routers import director, colorist, manager
@@ -20,6 +20,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 app.include_router(director.router)
 app.include_router(colorist.router)
 app.include_router(manager.router)
+
+
+@app.exception_handler(RedirectException)
+def redirect_exception_handler(request: Request, exc: RedirectException):
+    return RedirectResponse(url=exc.url, status_code=303)
 
 # ==========================================
 # Базовые маршруты (вход и главная)
@@ -57,34 +62,18 @@ def logout(request: Request):
     return response
 
 @app.get("/dashboard")
-def dashboard(request: Request, db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user:
-        return RedirectResponse(url="/", status_code=303)
-
+def dashboard(request: Request, db: Session = Depends(get_db), user: User = Depends(require_login)):
     if user.role and user.role.lower() == "колорист":
         return RedirectResponse(url="/colorist", status_code=303)
     if user.role and user.role.lower() == "директор":
         return RedirectResponse(url="/director", status_code=303)
 
-    all_orders = db.query(Order).filter(Order.branch_id == user.branch_id).order_by(Order.created_at.desc()).all()
-    orders = [o for o in all_orders if o.status != "Выдано"]
+    orders = db.query(Order).filter(
+        Order.branch_id == user.branch_id, Order.status != "Выдано"
+    ).order_by(Order.created_at.desc()).all()
 
     return templates.TemplateResponse(request=request, name="dashboard.html", context={
         "username": user.username,
         "orders": orders
     })
 
-
-@app.get("/shift/end-screen")
-def end_shift_screen(request: Request, db: Session = Depends(get_db)):
-    # Проверяем, авторизован ли колорист
-    user = get_current_user(request, db)
-    if not user or (user.role and user.role.lower() != "колорист"):
-        return RedirectResponse(url="/", status_code=303)
-
-    return templates.TemplateResponse(
-        request=request,
-        name="end_shift.html",
-        context={"username": user.username}
-    )

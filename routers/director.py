@@ -1,16 +1,35 @@
 import secrets
-import json
-import ast
+from datetime import datetime
 from typing import Optional
 from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import RedirectResponse, HTMLResponse
+from sqlalchemy import and_, case, func, not_
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import Order, User, Branch, Shift
-from utils import get_current_user, templates
+from utils import get_current_user, templates, require_director, parse_photo_list
 
 router = APIRouter(prefix="/director")
+
+
+def _apply_shift_filters(query, branch_id, colorist_id, date_from, date_to):
+    if branch_id:
+        query = query.filter(Shift.branch_id == branch_id)
+    if colorist_id:
+        query = query.filter(Shift.user_id == colorist_id)
+    if date_from:
+        try:
+            query = query.filter(Shift.start_time >= datetime.strptime(date_from, "%Y-%m-%d"))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            query = query.filter(Shift.start_time <= dt_to)
+        except ValueError:
+            pass
+    return query
 
 
 @router.get("")
@@ -25,31 +44,27 @@ def director_dashboard(request: Request, branch_id: Optional[str] = None, db: Se
     query = db.query(Order).order_by(Order.created_at.desc())
     shifts_query = db.query(Shift).join(User).filter(Shift.end_time == None).order_by(Shift.start_time.desc())
 
+    branch_filter = []
     current_branch = None
     if branch_id and branch_id.isdigit():
         b_id = int(branch_id)
+        branch_filter.append(Order.branch_id == b_id)
         query = query.filter(Order.branch_id == b_id)
         shifts_query = shifts_query.filter(Shift.branch_id == b_id)
         current_branch = db.query(Branch).filter(Branch.id == b_id).first()
 
-    all_orders = query.all()
-    orders = [o for o in all_orders if not (o.status == "Выдано" and o.is_paid == True)]
+    query = query.filter(not_(and_(Order.status == "Выдано", Order.is_paid == True)))
+    orders = query.all()
     shifts = shifts_query.all()
 
-    revenue_query = db.query(Order)
-    if branch_id and branch_id.isdigit():
-        revenue_query = revenue_query.filter(Order.branch_id == int(branch_id))
+    total_revenue = db.query(func.sum(Order.price)).filter(
+        *branch_filter, Order.price.isnot(None), Order.price != 0,
+        (Order.is_paid == True) | (Order.status == "Выдано")
+    ).scalar() or 0.0
 
-    all_network_orders = revenue_query.all()
-    total_revenue = sum(o.price for o in all_network_orders if o.price and (o.is_paid or o.status == "Выдано"))
-
-    total_paint_volume = 0.0
-    for o in all_network_orders:
-        vol = o.actual_volume if o.actual_volume is not None else (
-            o.target_volume if o.target_volume is not None else 0.0)
-        if vol > 10:
-            vol = vol / 1000.0
-        total_paint_volume += vol
+    volume_expr = func.coalesce(Order.actual_volume, Order.target_volume, 0.0)
+    normalized_volume = case((volume_expr > 10, volume_expr / 1000.0), else_=volume_expr)
+    total_paint_volume = db.query(func.sum(normalized_volume)).filter(*branch_filter).scalar() or 0.0
 
     total_reworks = sum(o.rework_count for o in orders)
     active_orders = len([o for o in orders if o.status not in ["Готово", "Выдано"]])
@@ -63,11 +78,8 @@ def director_dashboard(request: Request, branch_id: Optional[str] = None, db: Se
 
 
 @router.get("/orders")
-def director_active_orders(request: Request, branch_id: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user or not user.role or user.role.lower() != "директор":
-        return RedirectResponse(url="/", status_code=303)
-
+def director_active_orders(request: Request, branch_id: Optional[str] = None, db: Session = Depends(get_db),
+                           user: User = Depends(require_director)):
     branches = db.query(Branch).all()
     query = db.query(Order).order_by(Order.created_at.desc())
     current_branch = None
@@ -76,8 +88,8 @@ def director_active_orders(request: Request, branch_id: Optional[str] = None, db
         query = query.filter(Order.branch_id == b_id)
         current_branch = db.query(Branch).filter(Branch.id == b_id).first()
 
-    all_orders = query.all()
-    active_orders = [o for o in all_orders if not (o.status == "Выдано" and o.is_paid == True)]
+    query = query.filter(not_(and_(Order.status == "Выдано", Order.is_paid == True)))
+    active_orders = query.all()
 
     return templates.TemplateResponse(request=request, name="director_orders.html", context={
         "orders": active_orders, "branches": branches, "current_branch": current_branch
@@ -85,51 +97,47 @@ def director_active_orders(request: Request, branch_id: Optional[str] = None, db
 
 
 @router.get("/branches")
-def manage_branches(request: Request, db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user or not user.role or user.role.lower() != "директор":
-        return RedirectResponse(url="/", status_code=303)
+def manage_branches(request: Request, db: Session = Depends(get_db), user: User = Depends(require_director)):
     return templates.TemplateResponse(request=request, name="director_branches.html",
                                       context={"branches": db.query(Branch).all()})
 
 
 @router.get("/users")
-def manage_users(request: Request, db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user or not user.role or user.role.lower() != "директор":
-        return RedirectResponse(url="/", status_code=303)
+def manage_users(request: Request, db: Session = Depends(get_db), user: User = Depends(require_director)):
     return templates.TemplateResponse(request=request, name="director_users.html", context={
         "users": db.query(User).all(), "branches": db.query(Branch).all(), "current_username": user.username
     })
 
 
 @router.get("/shifts/print")
-def print_shifts_report(request: Request, branch_id: Optional[int] = None, db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user or not user.role or user.role.lower() != "директор":
-        return RedirectResponse(url="/", status_code=303)
+def print_shifts_report(request: Request, branch_id: Optional[str] = None, colorist_id: Optional[str] = None,
+                        date_from: Optional[str] = None, date_to: Optional[str] = None,
+                        db: Session = Depends(get_db), user: User = Depends(require_director)):
+    b_id = int(branch_id) if branch_id and branch_id.isdigit() else None
+    c_id = int(colorist_id) if colorist_id and colorist_id.isdigit() else None
+
     shifts_query = db.query(Shift).filter(Shift.end_time != None).order_by(Shift.start_time.desc())
-    if branch_id:
-        shifts_query = shifts_query.filter(Shift.branch_id == branch_id)
+    shifts_query = _apply_shift_filters(shifts_query, b_id, c_id, date_from, date_to)
+    shifts = shifts_query.all()
+    for shift in shifts:
+        shift.start_photos_list = parse_photo_list(shift.start_photos)
+        shift.end_photos_list = parse_photo_list(shift.end_photos)
+
     return templates.TemplateResponse(request=request, name="shifts_report_print.html",
-                                      context={"shifts": shifts_query.all()})
+                                      context={"shifts": shifts})
 
 
 @router.post("/branch/add")
-def add_branch(request: Request, name: str = Form(...), db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user or not user.role or user.role.lower() != "директор":
-        return RedirectResponse(url="/", status_code=303)
+def add_branch(request: Request, name: str = Form(...), db: Session = Depends(get_db),
+               user: User = Depends(require_director)):
     db.add(Branch(name=name))
     db.commit()
     return RedirectResponse(url="/director/branches?success=branch", status_code=303)
 
 
 @router.post("/branch/delete/{branch_id}")
-def delete_branch(request: Request, branch_id: int, db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user or not user.role or user.role.lower() != "директор":
-        return RedirectResponse(url="/", status_code=303)
+def delete_branch(request: Request, branch_id: int, db: Session = Depends(get_db),
+                  user: User = Depends(require_director)):
     branch = db.query(Branch).filter(Branch.id == branch_id).first()
     if branch:
         db.delete(branch)
@@ -139,10 +147,7 @@ def delete_branch(request: Request, branch_id: int, db: Session = Depends(get_db
 
 @router.post("/user/add")
 def add_user(request: Request, username_new: str = Form(...), role: str = Form(...), branch_id: int = Form(...),
-             db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user or not user.role or user.role.lower() != "директор":
-        return RedirectResponse(url="/", status_code=303)
+             db: Session = Depends(get_db), user: User = Depends(require_director)):
     if db.query(User).filter(User.username == username_new).first():
         return HTMLResponse("Ошибка: Пользователь с таким логином уже существует.")
 
@@ -154,11 +159,8 @@ def add_user(request: Request, username_new: str = Form(...), role: str = Form(.
 
 
 @router.post("/user/delete/{user_id}")
-def delete_user(request: Request, user_id: int, db: Session = Depends(get_db)):
-    current_user = get_current_user(request, db)
-    if not current_user or not current_user.role or current_user.role.lower() != "директор":
-        return RedirectResponse(url="/", status_code=303)
-
+def delete_user(request: Request, user_id: int, db: Session = Depends(get_db),
+                current_user: User = Depends(require_director)):
     target_user = db.query(User).filter(User.id == user_id).first()
     if target_user:
         if target_user.id == current_user.id:
@@ -177,22 +179,27 @@ def delete_user(request: Request, user_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/shifts")
-def director_shifts_list(request: Request, branch_id: Optional[str] = None, db: Session = Depends(get_db)):
+def director_shifts_list(request: Request, branch_id: Optional[str] = None, colorist_id: Optional[str] = None,
+                         date_from: Optional[str] = None, date_to: Optional[str] = None,
+                         db: Session = Depends(get_db)):
     """Список всех смен для директора"""
     user = get_current_user(request, db)
     if not user or (user.role and user.role.lower() != "директор"):
         return RedirectResponse(url="/dashboard", status_code=303)
 
     branches = db.query(Branch).all()
-    query = db.query(Shift).order_by(Shift.start_time.desc())
+    query = db.query(Shift).filter(Shift.end_time != None).order_by(Shift.start_time.desc())
 
     current_branch = None
-    if branch_id and branch_id.isdigit():
-        b_id = int(branch_id)
-        query = query.filter(Shift.branch_id == b_id)
+    b_id = int(branch_id) if branch_id and branch_id.isdigit() else None
+    if b_id:
         current_branch = db.query(Branch).filter(Branch.id == b_id).first()
+    c_id = int(colorist_id) if colorist_id and colorist_id.isdigit() else None
 
+    query = _apply_shift_filters(query, b_id, c_id, date_from, date_to)
     shifts = query.all()
+
+    colorists = db.query(User).filter(User.role == "Колорист").order_by(User.username).all()
 
     return templates.TemplateResponse(
         request=request,
@@ -200,7 +207,12 @@ def director_shifts_list(request: Request, branch_id: Optional[str] = None, db: 
         context={
             "shifts": shifts,
             "branches": branches,
-            "current_branch": current_branch
+            "current_branch": current_branch,
+            "colorists": colorists,
+            "filters": {
+                "branch_id": branch_id or "", "colorist_id": colorist_id or "",
+                "date_from": date_from or "", "date_to": date_to or ""
+            }
         }
     )
 
@@ -216,32 +228,8 @@ def director_shift_detail(request: Request, shift_id: int, db: Session = Depends
     if not shift:
         return RedirectResponse(url="/director/shifts", status_code=303)
 
-    # Умная функция для распаковки любых данных в список
-    def parse_photos(photo_data):
-        if not photo_data:
-            return []
-        if isinstance(photo_data, list):
-            return photo_data
-        if isinstance(photo_data, str):
-            # Пробуем как JSON
-            try:
-                parsed = json.loads(photo_data)
-                return parsed if isinstance(parsed, list) else [str(parsed)]
-            except json.JSONDecodeError:
-                pass
-            # Пробуем как Python-строку (если база сохранила как "['file.jpg']")
-            try:
-                parsed = ast.literal_eval(photo_data)
-                if isinstance(parsed, list):
-                    return parsed
-            except Exception:
-                pass
-            # Если это просто один путь текстом
-            return [photo_data]
-        return []
-
-    start_photos_list = parse_photos(shift.start_photos)
-    end_photos_list = parse_photos(shift.end_photos)
+    start_photos_list = parse_photo_list(shift.start_photos)
+    end_photos_list = parse_photo_list(shift.end_photos)
 
     return templates.TemplateResponse(
         request=request,

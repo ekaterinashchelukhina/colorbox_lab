@@ -84,7 +84,7 @@
             <td><strong>Тип услуги:</strong> {{ order.service_type }}</td>
         </tr>
         <tr>
-            <td><strong>Требуемый объем:</strong> {{ order.target_volume }} л.</td>
+            <td><strong>Требуемый объем:</strong> {{ order.target_volume }} мл.</td>
             <td><strong>Дата:</strong>
                 {% if order.deadline_at %}
                     {{ order.deadline_at.strftime('%d.%m.%Y') }}

@@ -1,4 +1,3 @@
-import os
 import json
 from datetime import datetime
 from typing import List
@@ -8,8 +7,8 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Order, Shift
-from utils import get_current_user, compress_and_save_image, templates, UPLOAD_DIR
+from models import Order, Shift, User
+from utils import get_current_user, templates, require_login, save_uploaded_photos
 
 router = APIRouter()
 
@@ -55,22 +54,13 @@ def start_shift(
     request: Request,
     client_time: str = Form(None),
     photos: List[UploadFile] = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(require_login)
 ):
-    user = get_current_user(request, db)
-    if not user:
-        return RedirectResponse(url="/", status_code=303)
-
     # Используем время устройства или текущее серверное как резерв
     start_dt = datetime.fromisoformat(client_time) if client_time else datetime.now()
 
-    saved_files = []
-    for photo in photos:
-        if photo.filename:
-            filename = f"{user.id}_start_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.jpg"
-            file_path = os.path.join(UPLOAD_DIR, filename)
-            compress_and_save_image(photo, file_path)
-            saved_files.append(file_path.replace("\\", "/"))
+    saved_files = save_uploaded_photos(photos, user.id, "start")
 
     new_shift = Shift(
         user_id=user.id,
@@ -88,23 +78,14 @@ def end_shift(
     request: Request,
     client_time: str = Form(None),
     photos: List[UploadFile] = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    user: User = Depends(require_login)
 ):
-    user = get_current_user(request, db)
-    if not user:
-        return RedirectResponse(url="/", status_code=303)
-
     active_shift = db.query(Shift).filter(Shift.user_id == user.id, Shift.end_time == None).first()
     if active_shift:
         end_dt = datetime.fromisoformat(client_time) if client_time else datetime.now()
 
-        saved_files = []
-        for photo in photos:
-            if photo.filename:
-                filename = f"{user.id}_end_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.jpg"
-                file_path = os.path.join(UPLOAD_DIR, filename)
-                compress_and_save_image(photo, file_path)
-                saved_files.append(file_path.replace("\\", "/"))
+        saved_files = save_uploaded_photos(photos, user.id, "end")
 
         active_shift.end_time = end_dt
         active_shift.end_photos = json.dumps(saved_files)

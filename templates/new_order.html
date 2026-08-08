@@ -19,21 +19,30 @@
                 <input type="text" name="car" required="required" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
             </div>
             <div style="flex: 1;">
-                <label style="font-size: 13px; font-weight: bold; color: #34495e;">Код краски</label>
-                <input type="text" name="paint_code" required="required" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
+                <label style="font-size: 13px; font-weight: bold; color: #34495e;">Код краски (необязательно)</label>
+                <input type="text" name="paint_code" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
             </div>
         </div>
 
         <div>
             <label style="font-size: 13px; font-weight: bold; color: #34495e;">Деталь (образец)</label>
-            <input type="text" name="detail" required="required" placeholder="Например: Лючок бензобака" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
+            <select name="detail" required="required" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; background: white; box-sizing: border-box;">
+                <option value="Лючок бензобака">Лючок бензобака</option>
+                <option value="Крыло">Крыло</option>
+                <option value="Дверь">Дверь</option>
+                <option value="Автомобиль">Автомобиль</option>
+                <option value="Капот">Капот</option>
+                <option value="Бампер">Бампер</option>
+                <option value="Другое">Другое</option>
+                <option value="Без детали">Без детали</option>
+            </select>
         </div>
 
         <div>
             <label style="font-size: 13px; font-weight: bold; color: #34495e;">Тип услуги</label>
             <select name="service_type" required="required" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; background: white; box-sizing: border-box;">
-                <option value="Подбор">Подбор с колеровкой</option>
-                <option value="Слив по коду">Слив по коду (без колеровки)</option>
+                <option value="Подбор">Подбор</option>
+                <option value="Слив по коду">Слив по коду</option>
                 <option value="Экспресс-подбор">Экспресс-подбор</option>
                 <option value="Готовая автоэмаль">Готовая автоэмаль (банка)</option>
             </select>
@@ -53,8 +62,8 @@
 
         <div style="display: flex; gap: 15px;">
             <div style="flex: 1;">
-                <label style="font-size: 13px; font-weight: bold; color: #34495e;">Требуемый объем (л)</label>
-                <input type="number" step="0.1" name="target_volume" required="required" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
+                <label style="font-size: 13px; font-weight: bold; color: #34495e;">Требуемый объем (мл)</label>
+                <input type="number" step="1" name="target_volume" required="required" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
             </div>
             <div style="flex: 1;">
                 <label style="font-size: 13px; font-weight: bold; color: #34495e;">Дедлайн (дата выдачи)</label>

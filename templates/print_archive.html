@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Архив заказов - отчет</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; padding: 20px; }
+        h2 { text-align: center; color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #bdc3c7; padding: 10px; text-align: left; font-size: 13px; vertical-align: top; }
+        th { background: #f4f6f9; color: #2c3e50; }
+        .text-right { text-align: right; }
+        @media print {
+            .no-print { display: none; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+
+    <div class="no-print" style="margin-bottom: 20px; text-align: right;">
+        <button onclick="window.print()" style="background: #3498db; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">🖨 Сохранить в PDF / Печать</button>
+    </div>
+
+    <h2>Архив выполненных заказов</h2>
+    <p>Дата формирования: <span id="gen_date"></span></p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Клиент</th>
+                <th>Авто / Деталь</th>
+                <th>Код краски</th>
+                <th>Филиал</th>
+                <th>Колорист</th>
+                <th>Дата</th>
+                <th class="text-right">Объем</th>
+                <th class="text-right">Стоимость</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td>#{{ order.id }}</td>
+                <td>{{ order.client.name if order.client else "—" }}</td>
+                <td>{{ order.car }} ({{ order.detail }})</td>
+                <td><strong>{{ order.paint_code }}</strong></td>
+                <td>{{ order.branch.name if order.branch else "—" }}</td>
+                <td>{{ order.colorist.username if order.colorist else "—" }}</td>
+                <td>{{ order.created_at.strftime('%d.%m.%Y') if order.created_at else "—" }}</td>
+                <td class="text-right">{{ order.actual_volume if order.actual_volume else order.target_volume }} мл.</td>
+                <td class="text-right">{{ order.price }} ₽</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="9" style="text-align: center; color: #7f8c8d; padding: 20px;">Заказов за выбранный период не найдено.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% if orders %}
+        <tfoot>
+            <tr>
+                <td colspan="8" class="text-right"><strong>Итого:</strong></td>
+                <td class="text-right"><strong>{{ total_price }} ₽</strong></td>
+            </tr>
+        </tfoot>
+        {% endif %}
+    </table>
+
+    <script>
+        document.getElementById('gen_date').innerText = new Date().toLocaleDateString();
+    </script>
+</body>
+</html>

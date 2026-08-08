@@ -10,22 +10,49 @@
             📸 Журнал смен (Фотоконтроль)
         </h2>
 
-        <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-            <form action="/director/shifts" method="get" class="w-full sm:w-auto">
-                <select name="branch_id" class="w-full p-2.5 border border-[#ecf0f1] rounded-lg bg-white text-[#2c3e50] font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3498db]" onchange="this.form.submit()">
-                    <option value="">Все филиалы</option>
-                    {% for branch in branches %}
-                    <option value="{{ branch.id }}" {% if current_branch and current_branch.id == branch.id %}selected{% endif %}>
-                        {{ branch.name }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </form>
-            <a href="/director" class="bg-[#7f8c8d] hover:bg-[#34495e] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors text-center w-full sm:w-auto whitespace-nowrap">
-                ← Назад на панель
-            </a>
-        </div>
+        <a href="/director" class="bg-[#7f8c8d] hover:bg-[#34495e] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors text-center w-full md:w-auto whitespace-nowrap">
+            ← Назад на панель
+        </a>
     </div>
+
+    <!-- Фильтры -->
+    <form action="/director/shifts" method="get" class="bg-white p-4 rounded-xl border border-[#ecf0f1] shadow-sm flex flex-wrap gap-3 items-end">
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-[#7f8c8d] uppercase">Филиал</label>
+            <select name="branch_id" class="p-2.5 border border-[#ecf0f1] rounded-lg bg-white text-[#2c3e50] font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3498db]">
+                <option value="">Все филиалы</option>
+                {% for branch in branches %}
+                <option value="{{ branch.id }}" {% if current_branch and current_branch.id == branch.id %}selected{% endif %}>
+                    {{ branch.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-[#7f8c8d] uppercase">Колорист</label>
+            <select name="colorist_id" class="p-2.5 border border-[#ecf0f1] rounded-lg bg-white text-[#2c3e50] font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3498db]">
+                <option value="">Все колористы</option>
+                {% for c in colorists %}
+                <option value="{{ c.id }}" {% if filters.colorist_id == c.id|string %}selected{% endif %}>{{ c.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-[#7f8c8d] uppercase">С даты</label>
+            <input type="date" name="date_from" value="{{ filters.date_from }}" class="p-2.5 border border-[#ecf0f1] rounded-lg bg-white text-[#2c3e50] font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3498db]">
+        </div>
+        <div class="flex flex-col gap-1">
+            <label class="text-xs font-bold text-[#7f8c8d] uppercase">По дату</label>
+            <input type="date" name="date_to" value="{{ filters.date_to }}" class="p-2.5 border border-[#ecf0f1] rounded-lg bg-white text-[#2c3e50] font-bold shadow-sm focus:outline-none focus:ring-2 focus:ring-[#3498db]">
+        </div>
+        <button type="submit" class="bg-[#3498db] hover:bg-[#2980b9] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">Применить</button>
+        <a href="/director/shifts" class="bg-[#ecf0f1] hover:bg-[#dfe4e6] text-[#2c3e50] px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">Сбросить</a>
+        <a href="/director/shifts/print?branch_id={{ filters.branch_id }}&colorist_id={{ filters.colorist_id }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}"
+           target="_blank"
+           class="bg-[#2c3e50] hover:bg-[#1a252f] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors sm:ml-auto">
+            🖨 PDF / Печать
+        </a>
+    </form>
 
     <!-- Таблица смен (Скрыта на мобильных) -->
     <div class="hidden md:block bg-white rounded-xl shadow-sm border border-[#ecf0f1] overflow-hidden">

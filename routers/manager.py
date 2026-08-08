@@ -7,19 +7,14 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Order, Client, RecipeItem
-from utils import get_current_user, compress_and_save_image, templates, UPLOAD_DIR
+from models import Order, Client, RecipeItem, User, Branch
+from utils import get_current_user, compress_and_save_image, templates, UPLOAD_DIR, require_login
 
 router = APIRouter()
 
 
-@router.get("/archive")
-def view_archive(request: Request, branch_id: Optional[str] = None, db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user:
-        return RedirectResponse(url="/", status_code=303)
-
-    user_role = user.role.capitalize() if user.role else ""
+def _filtered_archive_query(db: Session, user: User, user_role: str, branch_id: Optional[str],
+                            colorist_id: Optional[str], date_from: Optional[str], date_to: Optional[str]):
     query = db.query(Order).filter(Order.status == "Выдано")
 
     if user_role == "Директор":
@@ -28,9 +23,56 @@ def view_archive(request: Request, branch_id: Optional[str] = None, db: Session 
     else:
         query = query.filter(Order.branch_id == user.branch_id)
 
-    archived_orders = query.order_by(Order.created_at.desc()).all()
-    return templates.TemplateResponse(request=request, name="archive.html",
-                                      context={"orders": archived_orders, "role": user_role})
+    if colorist_id and colorist_id.isdigit():
+        query = query.filter(Order.colorist_id == int(colorist_id))
+
+    if date_from:
+        try:
+            query = query.filter(Order.created_at >= datetime.strptime(date_from, "%Y-%m-%d"))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            query = query.filter(Order.created_at <= dt_to)
+        except ValueError:
+            pass
+
+    return query.order_by(Order.created_at.desc())
+
+
+@router.get("/archive")
+def view_archive(request: Request, branch_id: Optional[str] = None, colorist_id: Optional[str] = None,
+                 date_from: Optional[str] = None, date_to: Optional[str] = None,
+                 db: Session = Depends(get_db), user: User = Depends(require_login)):
+    user_role = user.role.capitalize() if user.role else ""
+    archived_orders = _filtered_archive_query(db, user, user_role, branch_id, colorist_id, date_from, date_to).all()
+
+    colorist_query = db.query(User).filter(User.role == "Колорист")
+    if user_role != "Директор":
+        colorist_query = colorist_query.filter(User.branch_id == user.branch_id)
+
+    return templates.TemplateResponse(request=request, name="archive.html", context={
+        "orders": archived_orders, "role": user_role,
+        "branches": db.query(Branch).all() if user_role == "Директор" else [],
+        "colorists": colorist_query.order_by(User.username).all(),
+        "filters": {
+            "branch_id": branch_id or "", "colorist_id": colorist_id or "",
+            "date_from": date_from or "", "date_to": date_to or ""
+        }
+    })
+
+
+@router.get("/archive/print")
+def print_archive(request: Request, branch_id: Optional[str] = None, colorist_id: Optional[str] = None,
+                  date_from: Optional[str] = None, date_to: Optional[str] = None,
+                  db: Session = Depends(get_db), user: User = Depends(require_login)):
+    user_role = user.role.capitalize() if user.role else ""
+    orders = _filtered_archive_query(db, user, user_role, branch_id, colorist_id, date_from, date_to).all()
+    total_price = sum(o.price for o in orders if o.price)
+
+    return templates.TemplateResponse(request=request, name="print_archive.html",
+                                      context={"orders": orders, "role": user_role, "total_price": total_price})
 
 
 @router.get("/new-order")
@@ -43,13 +85,10 @@ def show_new_order_form(request: Request, db: Session = Depends(get_db)):
 @router.post("/new-order")
 def create_order(
         request: Request, client_name: str = Form(...), car: str = Form(...), detail: str = Form(...),
-        paint_code: str = Form(...), service_type: str = Form(...), target_volume: float = Form(...),
+        paint_code: Optional[str] = Form(None), service_type: str = Form(...), target_volume: float = Form(...),
         deadline: str = Form(...), manager_comment: str = Form(None), file: UploadFile = File(None),
-        db: Session = Depends(get_db)
+        db: Session = Depends(get_db), manager: User = Depends(require_login)
 ):
-    manager = get_current_user(request, db)
-    if not manager:
-        return RedirectResponse(url="/", status_code=303)
     if not manager.branch_id:
         return HTMLResponse("<h2>Ошибка: Нет привязки к филиалу!</h2>")
     if service_type in ["Подбор", "Экспресс-подбор"] and (not file or not file.filename):
@@ -64,10 +103,11 @@ def create_order(
 
     deadline_dt = datetime.strptime(deadline, "%Y-%m-%d").replace(hour=18, minute=0, tzinfo=timezone.utc)
     is_express = True if service_type == "Экспресс-подбор" else False
+    clean_paint_code = paint_code.strip() if paint_code else ""
 
     new_order = Order(
         branch_id=manager.branch_id, client_id=client.id, manager_id=manager.id,
-        car=car, detail=detail, paint_code=paint_code, category="Не указана",
+        car=car, detail=detail, paint_code=clean_paint_code, category="Не указана",
         service_type=service_type, target_volume=target_volume, is_express=is_express,
         price=0.0, deadline_at=deadline_dt, manager_comment=manager_comment
     )
@@ -84,10 +124,8 @@ def create_order(
 
 
 @router.get("/order/{order_id}")
-def view_order(request: Request, order_id: int, db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user:
-        return RedirectResponse(url="/", status_code=303)
+def view_order(request: Request, order_id: int, db: Session = Depends(get_db),
+               user: User = Depends(require_login)):
     order = db.query(Order).filter(Order.id == order_id).first()
     if not order:
         return RedirectResponse(url="/dashboard", status_code=303)
@@ -99,10 +137,7 @@ def view_order(request: Request, order_id: int, db: Session = Depends(get_db)):
 
 @router.post("/order/{order_id}/status")
 def update_order_status(request: Request, order_id: int, new_status: str = Form(...), actual_volume: float = Form(None),
-                        db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user:
-        return RedirectResponse(url="/", status_code=303)
+                        db: Session = Depends(get_db), user: User = Depends(require_login)):
     order = db.query(Order).filter(Order.id == order_id).first()
     if order:
         if user.role and user.role.lower() == "колорист":
@@ -134,10 +169,7 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
 
 @router.post("/order/{order_id}/upload")
 def upload_photo(request: Request, order_id: int, photo_type: str = Form(...), file: UploadFile = File(...),
-                 db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user:
-        return RedirectResponse(url="/", status_code=303)
+                 db: Session = Depends(get_db), user: User = Depends(require_login)):
     order = db.query(Order).filter(Order.id == order_id).first()
     if order and file and file.filename:
         file_path = f"{UPLOAD_DIR}/order_{order_id}_{photo_type}.jpg"
@@ -202,18 +234,16 @@ def update_order_comment(request: Request, order_id: int, comment_type: str = Fo
 
 
 @router.get("/order/{order_id}/print")
-def print_order(request: Request, order_id: int, db: Session = Depends(get_db)):
-    if not get_current_user(request, db):
-        return RedirectResponse(url="/", status_code=303)
+def print_order(request: Request, order_id: int, db: Session = Depends(get_db),
+                _: User = Depends(require_login)):
     order = db.query(Order).filter(Order.id == order_id).first()
     return templates.TemplateResponse(request=request, name="print_order.html",
                                       context={"order": order}) if order else RedirectResponse(url="/dashboard")
 
 
 @router.get("/client/{client_id}")
-def view_client(request: Request, client_id: int, db: Session = Depends(get_db)):
-    if not get_current_user(request, db):
-        return RedirectResponse(url="/", status_code=303)
+def view_client(request: Request, client_id: int, db: Session = Depends(get_db),
+                _: User = Depends(require_login)):
     client = db.query(Client).filter(Client.id == client_id).first()
     return templates.TemplateResponse(request=request, name="client_detail.html",
                                       context={"client": client}) if client else RedirectResponse(url="/dashboard")
