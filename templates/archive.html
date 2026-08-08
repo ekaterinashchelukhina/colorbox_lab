@@ -42,7 +42,7 @@
                     <td class="p-4">
                         <span class="text-[#2c3e50] font-bold">
                             <!-- Если фактический объем не указан, показываем целевой -->
-                            {{ order.actual_volume if order.actual_volume else order.target_volume }} л.
+                            {{ order.actual_volume if order.actual_volume else order.target_volume }} мл.
                         </span>
                     </td>
                     <td class="p-4 font-bold text-green-600">
@@ -88,7 +88,7 @@
             
             <div class="flex justify-between items-center border-t border-[#ecf0f1] pt-3 mt-1">
                 <div class="text-xs text-[#7f8c8d] font-bold">
-                    Объем: <span class="text-[#2c3e50] text-sm">{{ order.actual_volume if order.actual_volume else order.target_volume }} л.</span>
+                    Объем: <span class="text-[#2c3e50] text-sm">{{ order.actual_volume if order.actual_volume else order.target_volume }} мл.</span>
                 </div>
                 
                 <a href="/order/{{ order.id }}" class="bg-[#3498db] hover:bg-[#2980b9] text-white px-6 py-2 rounded-lg font-bold text-sm transition-colors">

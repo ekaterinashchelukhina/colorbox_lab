@@ -15,7 +15,6 @@ from models import Base, Order, User, Client, Branch, RecipeItem, Shift
 
 app = FastAPI(title="Colorist CRM")
 
-# Создаем папку для загрузок, если её нет
 UPLOAD_DIR = "static/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -24,26 +23,20 @@ templates = Jinja2Templates(directory="templates")
 
 
 def compress_and_save_image(file: UploadFile, path: str):
-    """Функция для сжатия и оптимизации изображений перед сохранением."""
     img = Image.open(file.file)
-
-    # Конвертируем в RGB, если это PNG с прозрачностью или палитра
     if img.mode in ("RGBA", "P"):
         img = img.convert("RGB")
 
-    # Ограничиваем максимальную ширину (1280px), сохраняя пропорции
     max_width = 1280
     if img.width > max_width:
         ratio = max_width / float(img.width)
         new_height = int(float(img.height) * float(ratio))
         img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
 
-    # Сохраняем в формате JPEG с качеством 85% и оптимизацией
     img.save(path, "JPEG", quality=85, optimize=True)
 
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optional[User]:
-    """Зависимость для авторизации пользователя по токену из кук."""
     token = request.cookies.get("access_token")
     if not token:
         return None
@@ -264,6 +257,7 @@ def view_archive(
             "role": user_role
         }
     )
+
 
 @app.get("/new-order")
 def show_new_order_form(request: Request, db: Session = Depends(get_db)):
@@ -615,9 +609,21 @@ def director_dashboard(request: Request, branch_id: Optional[str] = None, db: Se
     orders = [o for o in all_orders if not (o.status == "Выдано" and o.is_paid == True)]
     shifts = shifts_query.all()
 
-    # Исправлено: теперь выручка корректно суммируется для заказов со статусом "Выдано" или полем is_paid == True
-    total_revenue = sum(o.price for o in orders if o.price and (o.is_paid or o.status == "Выдано"))
-    total_paint_volume = sum(o.actual_volume for o in orders if o.actual_volume is not None)
+    revenue_query = db.query(Order)
+    if branch_id and branch_id.isdigit():
+        revenue_query = revenue_query.filter(Order.branch_id == int(branch_id))
+
+    all_network_orders = revenue_query.all()
+    total_revenue = sum(o.price for o in all_network_orders if o.price and (o.is_paid or o.status == "Выдано"))
+
+    # Считаем общий объем по сети: если значение больше 10, делим на 1000 (переводим миллилитры в литры)
+    total_paint_volume = 0.0
+    for o in all_network_orders:
+        vol = o.actual_volume if o.actual_volume is not None else (o.target_volume if o.target_volume is not None else 0.0)
+        if vol > 10:
+            vol = vol / 1000.0
+        total_paint_volume += vol
+
     total_reworks = sum(o.rework_count for o in orders)
     active_orders = len([o for o in orders if o.status not in ["Готово", "Выдано"]])
 
