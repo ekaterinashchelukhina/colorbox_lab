@@ -1,87 +1,151 @@
 {% extends "base.html" %}
 
-{% block title %}Управление сотрудниками - Colorist CRM{% endblock %}
+{% block title %}Управление сотрудниками - ColorBox Lab{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width: 1000px; margin: 0 auto; padding: 20px; background: #fff; border-radius: 8px;">
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; margin-bottom: 20px;">
-        <h2 style="margin: 0; color: #2c3e50;">👤 Управление сотрудниками</h2>
-        <a href="/director" style="background: #7f8c8d; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px;">← Назад на панель</a>
+<div class="flex flex-col gap-6 w-full max-w-5xl mx-auto">
+
+    <!-- Заголовок и кнопка Назад -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b-2 border-[#ecf0f1] pb-4">
+        <h2 class="text-2xl font-bold text-[#2c3e50] flex items-center gap-2">
+            👤 Управление сотрудниками
+        </h2>
+        <a href="/director" class="bg-[#7f8c8d] hover:bg-[#34495e] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors text-center w-full sm:w-auto">
+            ← Назад на панель
+        </a>
     </div>
 
-    <!-- Блок уведомления с сгенерированным токеном -->
+    <!-- Уведомления об успешных действиях (создание/удаление) -->
     {% if request.query_params.get('success') == 'user' %}
-        <div style="background: #e8f8f5; border: 1px solid #27ae60; color: #27ae60; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-            <strong>✅ Сотрудник "{{ request.query_params.get('new_name') }}" успешно зарегистрирован!</strong>
-            <p style="margin: 8px 0 0 0; font-size: 13px; color: #2c3e50;">
-                Персональный токен доступа для входа (скопируйте его, он больше не отобразится в открытом виде):
-            </p>
-            <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center;">
-                <input type="text" readonly value="{{ request.query_params.get('new_token') }}" id="newTokenField" style="flex: 1; padding: 8px; background: #fff; border: 1px solid #27ae60; border-radius: 4px; font-family: monospace; font-weight: bold;" />
-                <button onclick="navigator.clipboard.writeText(document.getElementById('newTokenField').value); alert('Токен скопирован в буфер обмена!');" style="background: #27ae60; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">Скопировать</button>
-            </div>
-        </div>
+    <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg shadow-sm">
+        <div class="text-green-800 font-bold mb-1">✅ Сотрудник {{ request.query_params.get('new_name') }} успешно добавлен!</div>
+        <div class="text-sm text-green-700">Токен для входа: <span class="font-mono font-bold text-lg bg-white px-2 py-1 rounded border border-green-200 ml-1">{{ request.query_params.get('new_token') }}</span></div>
+        <div class="text-xs text-green-600 mt-2 font-medium">⚠️ Обязательно скопируйте этот токен и передайте сотруднику, он показывается только один раз!</div>
+    </div>
     {% elif request.query_params.get('success') == 'user_delete' %}
-        <div style="background: #fdf2f2; border: 1px solid #e74c3c; color: #c0392b; padding: 12px 20px; border-radius: 6px; margin-bottom: 20px; font-weight: bold; font-size: 14px;">
-            🗑 Сотрудник успешно удален из системы.
-        </div>
+    <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm">
+        <div class="text-red-800 font-bold">Сотрудник удален.</div>
+    </div>
     {% endif %}
 
-    <!-- Форма добавления сотрудника (без поля пароля) -->
-    <form action="/director/user/add" method="POST" style="display: flex; gap: 10px; flex-wrap: wrap; background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; align-items: flex-end;">
-        <div style="flex: 2; min-width: 200px;">
-            <label style="font-size: 12px; color: #7f8c8d; display: block; margin-bottom: 3px;">Логин сотрудника:</label>
-            <input type="text" name="username_new" required placeholder="например: colorist_ufa" style="width: 100%; padding: 8px; border: 1px solid #bdc3c7; border-radius: 4px; box-sizing: border-box;" />
-        </div>
-        <div style="flex: 1; min-width: 150px;">
-            <label style="font-size: 12px; color: #7f8c8d; display: block; margin-bottom: 3px;">Роль:</label>
-            <select name="role" style="width: 100%; padding: 9px; border: 1px solid #bdc3c7; border-radius: 4px; background: white;">
-                <option value="Колорист">Колорист</option>
-                <option value="Менеджер">Менеджер</option>
-                <option value="Директор">Директор</option>
-            </select>
-        </div>
-        <div style="flex: 1; min-width: 180px;">
-            <label style="font-size: 12px; color: #7f8c8d; display: block; margin-bottom: 3px;">Филиал:</label>
-            <select name="branch_id" style="width: 100%; padding: 9px; border: 1px solid #bdc3c7; border-radius: 4px; background: white;">
-                {% for b in branches %}
-                <option value="{{ b.id }}">{{ b.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <button type="submit" style="background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;">Сгенерировать токен</button>
-    </form>
+    <!-- Форма создания нового сотрудника -->
+    <div class="bg-gray-50 p-5 sm:p-6 rounded-xl border border-[#ecf0f1] shadow-sm">
+        <form action="/director/user/add" method="post" class="flex flex-col md:flex-row gap-4 items-end">
 
-    <!-- Таблица сотрудников -->
-    <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
-        <thead>
-            <tr style="border-bottom: 2px solid #ecf0f1; background: #f8f9fa;">
-                <th style="padding: 12px 15px;">ID</th>
-                <th style="padding: 12px 15px;">Логин</th>
-                <th style="padding: 12px 15px;">Роль</th>
-                <th style="padding: 12px 15px;">Филиал</th>
-                <th style="padding: 12px 15px; text-align: right;">Действие</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for u in users %}
-            <tr style="border-bottom: 1px solid #ecf0f1;">
-                <td style="padding: 12px 15px; color: #7f8c8d;">#{{ u.id }}</td>
-                <td style="padding: 12px 15px; font-weight: bold; color: #2c3e50;">{{ u.username }}</td>
-                <td style="padding: 12px 15px;"><span style="background: #ecf0f1; padding: 3px 8px; border-radius: 4px; font-size: 12px;">{{ u.role }}</span></td>
-                <td style="padding: 12px 15px;">{{ u.branch.name if u.branch else "—" }}</td>
-                <td style="padding: 12px 15px; text-align: right;">
-                    {% if u.username != current_username %}
-                    <form action="/director/user/delete/{{ u.id }}" method="POST" onsubmit="return confirm('Удалить сотрудника {{ u.username }}?');" style="margin: 0;">
-                        <button type="submit" style="color: #e74c3c; border: none; background: none; cursor: pointer; font-weight: bold;">Удалить</button>
-                    </form>
+            <div class="w-full md:w-1/3">
+                <label class="block text-sm font-bold text-[#7f8c8d] mb-1">Логин сотрудника:</label>
+                <input type="text" name="username_new" placeholder="например: colorist_ufa" required
+                       class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#27ae60] focus:outline-none bg-white">
+            </div>
+
+            <div class="w-full md:w-1/4">
+                <label class="block text-sm font-bold text-[#7f8c8d] mb-1">Роль:</label>
+                <select name="role" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#27ae60] focus:outline-none bg-white">
+                    <option value="Колорист">Колорист</option>
+                    <option value="Менеджер">Менеджер</option>
+                    <option value="Директор">Директор</option>
+                </select>
+            </div>
+
+            <div class="w-full md:w-1/3">
+                <label class="block text-sm font-bold text-[#7f8c8d] mb-1">Филиал:</label>
+                <select name="branch_id" required class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#27ae60] focus:outline-none bg-white">
+                    {% for branch in branches %}
+                    <option value="{{ branch.id }}">{{ branch.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="w-full md:w-auto mt-2 md:mt-0">
+                <button type="submit" class="w-full bg-[#27ae60] hover:bg-[#219150] text-white font-bold py-2.5 px-6 rounded-lg transition-colors shadow-sm">
+                    Сгенерировать токен
+                </button>
+            </div>
+
+        </form>
+    </div>
+
+    <!-- ДЕСКТОПНАЯ ВЕРСИЯ: ТАБЛИЦА (Скрыта на телефонах) -->
+    <div class="hidden md:block bg-white rounded-xl shadow-sm border border-[#ecf0f1] overflow-hidden">
+        <table class="w-full text-left text-sm border-collapse">
+            <thead class="bg-[#2c3e50] text-white">
+                <tr>
+                    <th class="p-4 font-bold w-16">ID</th>
+                    <th class="p-4 font-bold">Логин</th>
+                    <th class="p-4 font-bold">Роль</th>
+                    <th class="p-4 font-bold">Филиал</th>
+                    <th class="p-4 font-bold text-center w-32">Действие</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-[#ecf0f1]">
+                {% for user in users %}
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="p-4 text-[#7f8c8d] font-medium">#{{ user.id }}</td>
+                    <td class="p-4 font-bold text-[#2c3e50] text-base">{{ user.username }}</td>
+                    <td class="p-4">
+                        <span class="bg-gray-200 text-[#2c3e50] px-2 py-1 rounded text-xs font-bold">{{ user.role }}</span>
+                    </td>
+                    <td class="p-4 text-gray-700">
+                        {% if user.branch_id %}
+                            {% for b in branches %}{% if b.id == user.branch_id %}{{ b.name }}{% endif %}{% endfor %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td class="p-4 text-center">
+                        {% if user.username == current_username %}
+                            <span class="text-xs text-[#7f8c8d] font-bold">Текущий аккаунт</span>
+                        {% else %}
+                            <form action="/director/user/delete/{{ user.id }}" method="post" onsubmit="return confirm('Вы уверены, что хотите удалить сотрудника {{ user.username }}? Он больше не сможет войти в систему.');">
+                                <button type="submit" class="text-[#e74c3c] hover:text-[#c0392b] font-bold text-sm transition-colors">Удалить</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- МОБИЛЬНАЯ ВЕРСИЯ: КАРТОЧКИ (Скрыты на ПК) -->
+    <div class="flex flex-col gap-4 md:hidden">
+        {% for user in users %}
+        <div class="bg-white p-4 rounded-xl border border-[#ecf0f1] shadow-sm">
+
+            <div class="flex justify-between items-start mb-3">
+                <div class="font-bold text-xl text-[#2c3e50]">
+                    {{ user.username }}
+                    <span class="text-xs font-normal text-[#7f8c8d] ml-1">#{{ user.id }}</span>
+                </div>
+                <span class="bg-gray-200 text-[#2c3e50] px-2 py-1 rounded text-xs font-bold">{{ user.role }}</span>
+            </div>
+
+            <div class="text-sm text-gray-700 mb-4 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                <span class="font-bold text-[#7f8c8d]">Филиал:</span>
+                <span class="font-medium text-[#2c3e50]">
+                    {% if user.branch_id %}
+                        {% for b in branches %}{% if b.id == user.branch_id %}{{ b.name }}{% endif %}{% endfor %}
                     {% else %}
-                    <span style="color: #95a5a6; font-size: 12px;">Текущий аккаунт</span>
+                        Не назначен
                     {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+                </span>
+            </div>
+
+            <div class="flex justify-end border-t border-[#ecf0f1] pt-3">
+                {% if user.username == current_username %}
+                    <span class="text-xs text-[#7f8c8d] font-bold bg-gray-100 px-3 py-1.5 rounded-lg">Это вы (текущий аккаунт)</span>
+                {% else %}
+                    <form action="/director/user/delete/{{ user.id }}" method="post" onsubmit="return confirm('Вы уверены, что хотите удалить сотрудника {{ user.username }}?');">
+                        <button type="submit" class="bg-red-50 text-[#e74c3c] hover:bg-red-100 px-4 py-2 rounded-lg font-bold text-sm transition-colors border border-red-100">
+                            Удалить сотрудника
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+
+        </div>
+        {% endfor %}
+    </div>
+
 </div>
 {% endblock %}

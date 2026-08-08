@@ -1,5 +1,4 @@
 import os
-import shutil
 import secrets
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -58,28 +57,47 @@ def read_root(request: Request):
 
 @app.post("/login")
 def login(
+        request: Request,
         username: str = Form(...),
         token: str = Form(...),
         db: Session = Depends(get_db)
 ):
-    # Авторизация по логину и выданному токену
-    user = db.query(User).filter(User.username == username, User.token == token).first()
+    # 1. Защита от опечаток: отрезаем невидимые пробелы в начале и в конце
+    clean_username = username.strip()
+    clean_token = token.strip()
+
+    # 2. Выводим в терминал сервера то, что пришло из формы (для отладки)
+    print(f"--- ПОПЫТКА ВХОДА --- Логин: [{clean_username}], Токен: [{clean_token}]")
+
+    # Авторизация по очищенным данным
+    user = db.query(User).filter(
+        User.username == clean_username,
+        User.token == clean_token
+    ).first()
 
     if not user:
-        return HTMLResponse("Ошибка: Неверный логин или токен доступа")
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error_message": "Неверный логин или токен доступа"}
+        )
 
     response = HTMLResponse()
 
     user_role = user.role.lower() if user.role else ""
     if user_role == "директор":
-        response.headers["HX-Redirect"] = "/director"
+        redirect_url = "/director"
     elif user_role == "колорист":
-        response.headers["HX-Redirect"] = "/colorist"
+        redirect_url = "/colorist"
     else:
-        response.headers["HX-Redirect"] = "/dashboard"
+        redirect_url = "/dashboard"
 
-    # Устанавливаем токен в защищенные куки
-    response.set_cookie(key="access_token", value=token, httponly=True)
+    # Классический редирект
+    response = RedirectResponse(url=redirect_url, status_code=303)
+
+    # Устанавливаем токен в куки
+    response.set_cookie(key="access_token", value=clean_token, httponly=True)
+
     return response
 
 
@@ -100,7 +118,14 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     if user.role and user.role.lower() == "колорист":
         return RedirectResponse(url="/colorist", status_code=303)
 
-    orders = db.query(Order).filter(Order.branch_id == user.branch_id).all()
+    if user.role and user.role.lower() == "директор":
+        return RedirectResponse(url="/director", status_code=303)
+
+    # Получаем все заказы филиала из базы
+    all_orders = db.query(Order).filter(Order.branch_id == user.branch_id).order_by(Order.created_at.desc()).all()
+
+    # Изменено: заказ уходит в архив сразу при статусе "Выдано"
+    orders = [o for o in all_orders if o.status != "Выдано"]
 
     return templates.TemplateResponse(
         request=request,
@@ -217,8 +242,46 @@ def end_shift(
 
 
 # ==========================================
-# БЛОК ЗАКАЗОВ (МЕНЕДЖЕР И ЛОГИКА СТАТУСОВ)
+# БЛОК АРХИВА
 # ==========================================
+
+@app.get("/archive")
+def view_archive(
+        request: Request,
+        branch_id: Optional[str] = None,
+        db: Session = Depends(get_db)
+):
+    user = get_current_user(request, db)
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+
+    user_role = user.role.capitalize() if user.role else ""
+    user_branch_id = user.branch_id
+
+    filter_branch = int(branch_id) if branch_id and branch_id.isdigit() else None
+
+    # Изменено: в архив попадает всё, у чего статус "Выдано"
+    query = db.query(Order).filter(Order.status == "Выдано")
+
+    # Применяем фильтры в зависимости от роли
+    if user_role == "Директор":
+        if filter_branch:
+            query = query.filter(Order.branch_id == filter_branch)
+    else:
+        # Менеджеры и колористы видят архив только своего филиала
+        query = query.filter(Order.branch_id == user_branch_id)
+
+    # Сортируем от новых к старым и получаем результат
+    archived_orders = query.order_by(Order.created_at.desc()).all()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="archive.html",
+        context={
+            "orders": archived_orders,
+            "role": user_role
+        }
+    )
 
 @app.get("/new-order")
 def show_new_order_form(request: Request, db: Session = Depends(get_db)):
@@ -245,6 +308,19 @@ def create_order(
     manager = get_current_user(request, db)
     if not manager:
         return RedirectResponse(url="/", status_code=303)
+
+    # ЗАЩИТА ОТ СОЗДАНИЯ ЗАКАЗОВ БЕЗ ФИЛИАЛА
+    if not manager.branch_id:
+        return HTMLResponse("""
+        <div style="font-family: Arial, sans-serif; padding: 40px; text-align: center;">
+            <h2 style="color: #e74c3c;">Ошибка: Нет привязки к филиалу!</h2>
+            <p style="font-size: 16px; color: #2c3e50; max-width: 500px; margin: 0 auto;">
+                Ваша учетная запись (возможно, вы зашли под Директором) не привязана к конкретной лаборатории. Создавать заказы могут только менеджеры филиалов.
+            </p>
+            <br><br>
+            <button onclick="window.history.back()" style="background: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer;">← Вернуться назад</button>
+        </div>
+        """)
 
     if service_type in ["Подбор", "Экспресс-подбор"]:
         if not file or not file.filename:
@@ -344,6 +420,10 @@ def update_order_status(
 
     order = db.query(Order).filter(Order.id == order_id).first()
     if order:
+        # ЗАПИСЫВАЕМ КОЛОРИСТА
+        if user.role and user.role.lower() == "колорист":
+            order.colorist_id = user.id
+
         if new_status == "В работе" and order.service_type in ["Подбор", "Экспресс-подбор"]:
             if not order.photo_detail:
                 return HTMLResponse(f"""
@@ -469,7 +549,7 @@ def delete_recipe_item(
 def update_order_finance(
         request: Request,
         order_id: int,
-        price: float = Form(0.0),
+        price: str = Form("0"),  # Принимаем как строку, чтобы обработать запятые
         is_paid: str = Form(None),
         db: Session = Depends(get_db)
 ):
@@ -479,9 +559,16 @@ def update_order_finance(
 
     order = db.query(Order).filter(Order.id == order_id).first()
     if order:
-        order.price = price
+        try:
+            # Безопасно заменяем запятую на точку и преобразуем в float
+            clean_price = float(price.replace(",", "."))
+        except ValueError:
+            clean_price = 0.0
+
+        order.price = clean_price
         order.is_paid = (is_paid == "on")
         db.commit()
+
     return RedirectResponse(url=f"/order/{order_id}", status_code=303)
 
 
@@ -530,8 +617,13 @@ def director_dashboard(request: Request, branch_id: Optional[int] = None, db: Se
     branches = db.query(Branch).all()
     query = db.query(Order).order_by(Order.created_at.desc())
 
-    # На дашборде выводим ТОЛЬКО АКТИВНЫЕ смены (где end_time == None)
-    shifts_query = db.query(Shift).filter(Shift.end_time == None).order_by(Shift.start_time.desc())
+    # Исключаем удаленных сотрудников из смен
+    shifts_query = (
+        db.query(Shift)
+        .join(User)
+        .filter(Shift.end_time == None)
+        .order_by(Shift.start_time.desc())
+    )
 
     current_branch = None
 
@@ -540,27 +632,66 @@ def director_dashboard(request: Request, branch_id: Optional[int] = None, db: Se
         shifts_query = shifts_query.filter(Shift.branch_id == branch_id)
         current_branch = db.query(Branch).filter(Branch.id == branch_id).first()
 
-    orders = query.all()
+    # ВСЕ заказы филиала (нужны для честной аналитики и выручки по оплаченным)
+    all_orders = query.all()
+
     shifts = shifts_query.all()
 
-    total_revenue = sum(o.price for o in orders if o.is_paid)
-    total_paint_volume = sum(o.actual_volume for o in orders if o.actual_volume is not None)
-    total_reworks = sum(o.rework_count for o in orders)
-    active_orders = len([o for o in orders if o.status not in ["Готово", "Выдано"]])
+    # Считаем финансы и объем по ВСЕМ заказам сети (включая архивные, раз они оплачены)
+    total_revenue = sum(o.price for o in all_orders if o.is_paid)
+    total_paint_volume = sum(o.actual_volume for o in all_orders if o.actual_volume is not None)
+    total_reworks = sum(o.rework_count for o in all_orders)
+
+    # А для отображения на экране оставляем только те, что еще не выданы
+    active_dashboard_orders = [o for o in all_orders if o.status != "Выдано"]
+    active_orders_count = len([o for o in active_dashboard_orders if o.status not in ["Готово", "Выдано"]])
 
     return templates.TemplateResponse(
         request=request,
         name="director_dashboard.html",
         context={
             "username": user.username,
-            "orders": orders,
+            "orders": active_dashboard_orders,
             "shifts": shifts,
             "branches": branches,
             "current_branch": current_branch,
             "total_revenue": total_revenue,
             "total_paint_volume": round(total_paint_volume, 1),
             "total_reworks": total_reworks,
-            "active_orders": active_orders
+            "active_orders": active_orders_count
+        }
+    )
+
+
+@app.get("/director/orders")
+def director_active_orders(request: Request, branch_id: Optional[int] = None, db: Session = Depends(get_db)):
+    user = get_current_user(request, db)
+    if not user:
+        return RedirectResponse(url="/", status_code=303)
+
+    if not user.role or user.role.lower() != "директор":
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    branches = db.query(Branch).all()
+    query = db.query(Order).order_by(Order.created_at.desc())
+
+    current_branch = None
+    if branch_id:
+        query = query.filter(Order.branch_id == branch_id)
+        current_branch = db.query(Branch).filter(Branch.id == branch_id).first()
+
+    all_orders = query.all()
+
+    # Изменено: отсеиваем выданные
+    active_orders = [o for o in all_orders if o.status != "Выдано"]
+
+    return templates.TemplateResponse(
+        request=request,
+        name="director_orders.html",
+        context={
+            "orders": active_orders,
+            "branches": branches,
+            "current_branch": current_branch
         }
     )
 
@@ -683,7 +814,6 @@ def add_user(
     if existing:
         return HTMLResponse("Ошибка: Пользователь с таким логином уже существует.")
 
-    # Генерируем уникальный персональный токен доступа для сотрудника
     employee_token = secrets.token_hex(16)
 
     new_user = User(
@@ -696,7 +826,8 @@ def add_user(
     db.add(new_user)
     db.commit()
 
-    return RedirectResponse(url=f"/director/users?success=user&new_token={employee_token}&new_name={username_new}", status_code=303)
+    return RedirectResponse(url=f"/director/users?success=user&new_token={employee_token}&new_name={username_new}",
+                            status_code=303)
 
 
 @app.post("/director/user/delete/{user_id}")
@@ -716,6 +847,11 @@ def delete_user(
     if target_user:
         if target_user.id == current_user.id:
             return HTMLResponse("Ошибка: Нельзя удалить собственную учетную запись директора.")
+
+        # Сначала удаляем все связанные смены этого пользователя
+        db.query(Shift).filter(Shift.user_id == user_id).delete()
+
+        # Затем удаляем самого пользователя
         db.delete(target_user)
         db.commit()
 
@@ -726,7 +862,7 @@ def delete_user(
 def update_order_comment(
         request: Request,
         order_id: int,
-        comment_type: str = Form(...),  # "manager" или "colorist"
+        comment_type: str = Form(...),
         comment_text: str = Form(...),
         db: Session = Depends(get_db)
 ):

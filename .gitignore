@@ -12,6 +12,9 @@ seed_order.py
 update_db.py
 user_fix.py
 
+# Игнорировать загруженные пользователем файлы
+static/uploads/
+
 # Игнорировать настройки IDE и временные файлы
 .idea/
 __pycache__/

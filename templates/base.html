@@ -2,18 +2,16 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}Colorist CRM{% endblock %}</title>
 
+    <!-- Подключаем HTMX -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/1.9.10/htmx.min.js"></script>
+    <!-- Подключаем Tailwind CSS (исправляет проблему с дизайном) -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Оставляем старые стили для обратной совместимости с непереведенными страницами -->
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; background-color: #f4f4f9; }
-        .header { background-color: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
-        a.logout-btn { color: white; text-decoration: none; font-weight: bold; background: #e74c3c; padding: 8px 15px; border-radius: 5px; margin-left: 15px; }
-        a.logout-btn:hover { background: #c0392b; }
-        .content-wrapper { padding: 30px; display: flex; justify-content: center; }
-
         /* --- Стили для карточек и таблиц (Дашборд) --- */
         .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); width: 100%; max-width: 1200px; }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
@@ -42,17 +40,48 @@
         .btn-cancel { display: block; text-align: center; margin-top: 15px; color: #7f8c8d; text-decoration: none; font-size: 14px; }
     </style>
 </head>
-<body>
-    <div class="header">
-        <div><strong>Colorist CRM</strong> | Лаборатория автоэмалей</div>
-        <div>
-            Привет, {{ request.cookies.get("username", "Коллега") }}!
-            <a href="/logout" class="logout-btn">Выйти</a>
-        </div>
-    </div>
+<body class="bg-[#f4f4f9] text-gray-800 font-sans m-0 min-h-screen flex flex-col">
 
-    <div class="content-wrapper">
-        {% block content %}{% endblock %}
-    </div>
+    <!-- Адаптивная шапка на Tailwind -->
+    <header class="bg-[#2c3e50] text-white px-4 sm:px-6 py-4 flex flex-wrap justify-between items-center shadow-md gap-3">
+        <div class="text-lg font-bold flex items-center">
+            ColorBox Lab <span class="font-normal opacity-80 text-sm hidden sm:inline ml-2">| Лаборатория автоэмалей</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span class="text-sm hidden sm:inline">Привет, {{ request.cookies.get("username", "Коллега") }}!</span>
+            <a href="/logout" class="bg-[#e74c3c] hover:bg-[#c0392b] text-white font-bold py-2 px-4 rounded-md transition-colors shadow-sm text-sm">
+                Выйти
+            </a>
+        </div>
+    </header>
+
+    <!-- Основной контейнер, который отцентрирует всё содержимое -->
+    <main class="flex-1 w-full flex justify-center p-4 sm:p-8">
+        <div class="w-full max-w-7xl">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- Скрипт для автоматического перевода времени из UTC в локальное время пользователя -->
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll(".local-time").forEach(function(el) {
+            var utcTime = el.getAttribute("data-utc");
+            if (utcTime) {
+                // Буква 'Z' на конце дает браузеру понять, что это время по Гринвичу (UTC)
+                var date = new Date(utcTime + "Z");
+
+                // Браузер сам переведет время в часовой пояс устройства
+                el.textContent = date.toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        });
+    });
+    </script>
 </body>
 </html>
