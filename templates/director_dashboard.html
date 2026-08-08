@@ -33,8 +33,8 @@
         <div class="bg-white p-4 sm:p-5 rounded-xl border border-[#ecf0f1] shadow-sm flex flex-col justify-center">
             <div class="text-xs text-[#7f8c8d] font-bold uppercase tracking-wide mb-1">Объем краски</div>
             <div class="text-xl sm:text-2xl font-bold text-[#3498db]">
-    {{ "%.1f"|format(total_paint_volume) }} л.
-</div>
+                {{ "%.1f"|format(total_paint_volume) }} л.
+            </div>
         </div>
         <div class="bg-white p-4 sm:p-5 rounded-xl border border-[#ecf0f1] shadow-sm flex flex-col justify-center">
             <div class="text-xs text-[#7f8c8d] font-bold uppercase tracking-wide mb-1">Переделки</div>
@@ -98,10 +98,16 @@
                     {% set ns.found = true %}
                     <div class="bg-white p-4 rounded-lg border border-[#ecf0f1] border-l-4 border-l-[#2ecc71] flex items-center justify-between shadow-sm">
                         <div>
-                            <div class="font-bold text-sm text-[#2c3e50]">ID сотрудника: {{ shift.user_id }}</div>
-                            <div class="text-xs text-[#7f8c8d] mt-1">Филиал #{{ shift.branch_id }}</div>
+                            <!-- Имя сотрудника -->
+                            <div class="font-bold text-base text-[#2c3e50]">
+                                {{ shift.user.username if shift.user else 'Сотрудник #' ~ shift.user_id }}
+                            </div>
+                            <!-- Название филиала -->
+                            <div class="text-xs text-[#7f8c8d] mt-1">
+                                🏢 {% for b in branches %}{% if b.id == shift.branch_id %}{{ b.name }}{% endif %}{% endfor %}
+                            </div>
                         </div>
-                        <div class="text-[10px] sm:text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-bold animate-pulse uppercase">В цеху</div>
+                        <div class="text-[10px] sm:text-xs bg-green-100 text-green-800 px-2.5 py-1 rounded font-bold animate-pulse uppercase">В цеху</div>
                     </div>
                     {% endif %}
                 {% endfor %}
