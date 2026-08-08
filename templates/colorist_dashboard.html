@@ -32,28 +32,24 @@
 
             <!-- Сетка из 4 кнопок для фото -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <!-- 1. Рабочий стол -->
                 <label class="photo-label flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-gray-50 rounded-xl p-4 cursor-pointer transition-colors">
                     <span class="text-[#2c3e50] font-bold text-sm text-center mb-2">Рабочий стол<br><span class="text-xs font-normal text-gray-500">(РКМ, весы)</span></span>
                     <span class="status-icon text-xs font-bold bg-gray-200 text-gray-600 px-3 py-1 rounded-full">📸 Открыть камеру</span>
                     <input type="file" name="photos" accept="image/*" capture="environment" required id="s_p1" class="hidden">
                 </label>
 
-                <!-- 2. Вытяжной шкаф -->
                 <label class="photo-label flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-gray-50 rounded-xl p-4 cursor-pointer transition-colors">
                     <span class="text-[#2c3e50] font-bold text-sm text-center mb-2">Вытяжной шкаф<br><span class="text-xs font-normal text-gray-500">(Чистота)</span></span>
                     <span class="status-icon text-xs font-bold bg-gray-200 text-gray-600 px-3 py-1 rounded-full">📸 Открыть камеру</span>
                     <input type="file" name="photos" accept="image/*" capture="environment" required id="s_p2" class="hidden">
                 </label>
 
-                <!-- 3. Стойка -->
                 <label class="photo-label flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-gray-50 rounded-xl p-4 cursor-pointer transition-colors">
                     <span class="text-[#2c3e50] font-bold text-sm text-center mb-2">Стойка<br><span class="text-xs font-normal text-gray-500">(Наличие компонентов)</span></span>
                     <span class="status-icon text-xs font-bold bg-gray-200 text-gray-600 px-3 py-1 rounded-full">📸 Открыть камеру</span>
                     <input type="file" name="photos" accept="image/*" capture="environment" required id="s_p3" class="hidden">
                 </label>
 
-                <!-- 4. Общий вид -->
                 <label class="photo-label flex flex-col items-center justify-center border-2 border-dashed border-gray-300 bg-gray-50 rounded-xl p-4 cursor-pointer transition-colors">
                     <span class="text-[#2c3e50] font-bold text-sm text-center mb-2">Общий вид<br><span class="text-xs font-normal text-gray-500">(Панорама лаборатории)</span></span>
                     <span class="status-icon text-xs font-bold bg-gray-200 text-gray-600 px-3 py-1 rounded-full">📸 Открыть камеру</span>
@@ -75,9 +71,13 @@
             <span class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
             <span class="text-green-800 font-bold text-base">Смена активна</span>
         </div>
-        <span class="text-green-700 text-sm font-bold bg-white px-3 py-1 rounded-lg border border-green-200">
-            Старт: {{ active_shift.start_time.strftime('%H:%M') }}
-        </span>
+
+        <!-- ВОЗВРАЩАЕМ СКРИПТ (Браузер сам конвертирует UTC в локальное время) -->
+        <span class="text-green-700 text-sm font-bold bg-white px-3 py-1 rounded-lg border border-green-200" id="local_start_time"></span>
+        <script>
+            const utcDate = new Date("{{ active_shift.start_time.strftime('%Y-%m-%dT%H:%M:%S') }}Z");
+            document.getElementById('local_start_time').innerText = "Старт: " + utcDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        </script>
     </div>
 
     <!-- Очередь заказов -->
@@ -142,7 +142,7 @@
     function setupStrictPhotoValidation(inputIds, btnId, btnActiveText) {
         const inputs = inputIds.map(id => document.getElementById(id));
         const submitBtn = document.getElementById(btnId);
-        if (!submitBtn) return; // Защита от ошибок, если кнопки нет на странице
+        if (!submitBtn) return;
 
         function checkAllPhotos() {
             let allFilled = true;
@@ -189,7 +189,6 @@
         });
     }
 
-    // Запуск проверки только для старта смены
     setupStrictPhotoValidation(['s_p1', 's_p2', 's_p3', 's_p4'], 'start-btn', 'Начать смену');
 </script>
 {% endblock %}
