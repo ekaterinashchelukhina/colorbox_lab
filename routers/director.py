@@ -58,8 +58,8 @@ def _director_dashboard_stats(db: Session, branch_id: Optional[str]):
     normalized_volume = case((volume_expr > 10, volume_expr / 1000.0), else_=volume_expr)
     total_paint_volume = db.query(func.sum(normalized_volume)).filter(*branch_filter).scalar() or 0.0
 
-    rework_query = db.query(Order).filter(Order.rework_count > 0, Order.status != "Выдано")
-    total_reworks = rework_query.filter(*branch_filter).count()
+    # Накопительный счётчик: все доколеровки, включая уже сданные — не сбрасывается после выдачи
+    total_reworks = db.query(func.sum(Order.rework_count)).filter(*branch_filter).scalar() or 0
     active_orders = len([o for o in orders if o.status not in ["Готово", "Выдано"]])
 
     return {
