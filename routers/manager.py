@@ -12,9 +12,12 @@ from utils import get_current_user, compress_and_save_image, templates, UPLOAD_D
 
 router = APIRouter()
 
+SERVICE_TYPES = ["Подбор", "Слив по коду", "Экспресс-подбор", "Готовая автоэмаль"]
+
 
 def _filtered_archive_query(db: Session, user: User, user_role: str, branch_id: Optional[str],
-                            colorist_id: Optional[str], date_from: Optional[str], date_to: Optional[str]):
+                            colorist_id: Optional[str], date_from: Optional[str], date_to: Optional[str],
+                            service_type: Optional[str] = None):
     query = db.query(Order).filter(Order.status == "Выдано")
 
     if user_role == "Директор":
@@ -25,6 +28,9 @@ def _filtered_archive_query(db: Session, user: User, user_role: str, branch_id: 
 
     if colorist_id and colorist_id.isdigit():
         query = query.filter(Order.colorist_id == int(colorist_id))
+
+    if service_type:
+        query = query.filter(Order.service_type == service_type)
 
     if date_from:
         try:
@@ -44,9 +50,11 @@ def _filtered_archive_query(db: Session, user: User, user_role: str, branch_id: 
 @router.get("/archive")
 def view_archive(request: Request, branch_id: Optional[str] = None, colorist_id: Optional[str] = None,
                  date_from: Optional[str] = None, date_to: Optional[str] = None,
+                 service_type: Optional[str] = None,
                  db: Session = Depends(get_db), user: User = Depends(require_login)):
     user_role = user.role.capitalize() if user.role else ""
-    archived_orders = _filtered_archive_query(db, user, user_role, branch_id, colorist_id, date_from, date_to).all()
+    archived_orders = _filtered_archive_query(db, user, user_role, branch_id, colorist_id, date_from, date_to,
+                                              service_type).all()
 
     colorist_query = db.query(User).filter(User.role == "Колорист")
     if user_role != "Директор":
@@ -56,9 +64,10 @@ def view_archive(request: Request, branch_id: Optional[str] = None, colorist_id:
         "orders": archived_orders, "role": user_role,
         "branches": db.query(Branch).all() if user_role == "Директор" else [],
         "colorists": colorist_query.order_by(User.username).all(),
+        "service_types": SERVICE_TYPES,
         "filters": {
             "branch_id": branch_id or "", "colorist_id": colorist_id or "",
-            "date_from": date_from or "", "date_to": date_to or ""
+            "date_from": date_from or "", "date_to": date_to or "", "service_type": service_type or ""
         }
     })
 
@@ -66,9 +75,11 @@ def view_archive(request: Request, branch_id: Optional[str] = None, colorist_id:
 @router.get("/archive/print")
 def print_archive(request: Request, branch_id: Optional[str] = None, colorist_id: Optional[str] = None,
                   date_from: Optional[str] = None, date_to: Optional[str] = None,
+                  service_type: Optional[str] = None,
                   db: Session = Depends(get_db), user: User = Depends(require_login)):
     user_role = user.role.capitalize() if user.role else ""
-    orders = _filtered_archive_query(db, user, user_role, branch_id, colorist_id, date_from, date_to).all()
+    orders = _filtered_archive_query(db, user, user_role, branch_id, colorist_id, date_from, date_to,
+                                     service_type).all()
     total_price = sum(o.price for o in orders if o.price)
 
     return templates.TemplateResponse(request=request, name="print_archive.html",
