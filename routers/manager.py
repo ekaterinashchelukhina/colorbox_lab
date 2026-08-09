@@ -15,6 +15,14 @@ router = APIRouter()
 SERVICE_TYPES = ["Подбор", "Слив по коду", "Экспресс-подбор", "Готовая автоэмаль"]
 
 
+def _manager_shift_not_started(db: Session, user: User) -> bool:
+    """True, если это менеджер и у него нет активной смены."""
+    if not user.role or user.role.lower() != "менеджер":
+        return False
+    active_shift = db.query(Shift).filter(Shift.user_id == user.id, Shift.end_time == None).first()
+    return active_shift is None
+
+
 @router.post("/manager/shift/start")
 def manager_start_shift(request: Request, client_time: str = Form(None),
                         db: Session = Depends(get_db), user: User = Depends(require_login)):
@@ -120,8 +128,11 @@ def print_archive(request: Request, branch_id: Optional[str] = None, colorist_id
 
 @router.get("/new-order")
 def show_new_order_form(request: Request, db: Session = Depends(get_db)):
-    if not get_current_user(request, db):
+    user = get_current_user(request, db)
+    if not user:
         return RedirectResponse(url="/")
+    if _manager_shift_not_started(db, user):
+        return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(request=request, name="new_order.html")
 
 
@@ -133,6 +144,8 @@ def create_order(
         file: UploadFile = File(None),
         db: Session = Depends(get_db), manager: User = Depends(require_login)
 ):
+    if _manager_shift_not_started(db, manager):
+        return HTMLResponse("<h2>Ошибка: Сначала начните смену!</h2>")
     if not manager.branch_id:
         return HTMLResponse("<h2>Ошибка: Нет привязки к филиалу!</h2>")
     if service_type in ["Подбор", "Экспресс-подбор"] and (not file or not file.filename):

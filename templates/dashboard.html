@@ -13,9 +13,15 @@
             <a href="/archive" class="flex-1 sm:flex-none text-center bg-[#34495e] hover:bg-[#2c3e50] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
                 🗄 Архив
             </a>
+            {% if active_shift %}
             <a href="/new-order" class="flex-1 sm:flex-none text-center bg-[#2ecc71] hover:bg-[#27ae60] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
                 + Новый заказ
             </a>
+            {% else %}
+            <span title="Сначала начните смену" class="flex-1 sm:flex-none text-center bg-gray-200 text-gray-400 px-5 py-2.5 rounded-lg font-bold text-sm cursor-not-allowed">
+                + Новый заказ
+            </span>
+            {% endif %}
         </div>
     </div>
 
