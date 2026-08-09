@@ -137,21 +137,6 @@
     </div>
     {% endif %}
 
-    <!-- Сдача работы -->
-    <h3 class="h6 text-secondary text-uppercase fw-bold mb-3">Сдача работы</h3>
-    <div class="card shadow-sm border-0 rounded-4 p-4 bg-light border border-success">
-        <form action="/order/{{ order.id }}/status" method="post">
-            <input type="hidden" name="new_status" value="Готово">
-
-            <label class="fw-bold text-dark mb-2">Фактический объем (граммы):</label>
-            <input type="number" step="0.1" name="actual_volume" class="form-control form-control-lg mb-3" placeholder="Например: 550" required>
-
-            <button type="submit" class="btn btn-success w-100 fw-bold py-3 rounded-3 fs-5">
-                Сдать заказ (Готово)
-            </button>
-        </form>
-    </div>
-
 </div>
 
 <div class="card shadow-sm border-0 rounded-4 p-3 mb-4">
@@ -172,6 +157,23 @@
         <textarea name="comment_text" class="form-control mb-2" rows="2" placeholder="Например: Добавлен лишний грамм рапида...">{{ order.colorist_comment or '' }}</textarea>
         <button type="submit" class="btn btn-sm btn-primary fw-bold">Сохранить заметку</button>
     </form>
+</div>
+
+<div class="mb-4">
+    <!-- Сдача работы -->
+    <h3 class="h6 text-secondary text-uppercase fw-bold mb-3">Сдача работы</h3>
+    <div class="card shadow-sm border-0 rounded-4 p-4 bg-light border border-success">
+        <form action="/order/{{ order.id }}/status" method="post">
+            <input type="hidden" name="new_status" value="Готово">
+
+            <label class="fw-bold text-dark mb-2">Фактический объем (граммы):</label>
+            <input type="number" step="0.1" name="actual_volume" class="form-control form-control-lg mb-3" placeholder="Например: 550" required>
+
+            <button type="submit" class="btn btn-success w-100 fw-bold py-3 rounded-3 fs-5">
+                Сдать заказ (Готово)
+            </button>
+        </form>
+    </div>
 </div>
 </body>
 </html>
