@@ -1,7 +1,6 @@
-from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
-from database import Base
+from database import Base, utc_now
 
 
 class Branch(Base):
@@ -9,9 +8,12 @@ class Branch(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, unique=True, index=True)
 
-    users = relationship("User", back_populates="branch", cascade="all, delete-orphan")
-    clients = relationship("Client", back_populates="branch", cascade="all, delete-orphan")
-    orders = relationship("Order", back_populates="branch", cascade="all, delete-orphan")
+    # Без cascade delete: филиал с сотрудниками/клиентами/заказами не должен исчезать
+    # вместе с ними при удалении. Роут удаления филиала (routers/director.py) явно
+    # отказывает в удалении, пока на филиале что-то есть.
+    users = relationship("User", back_populates="branch")
+    clients = relationship("Client", back_populates="branch")
+    orders = relationship("Order", back_populates="branch")
 
 
 class User(Base):
@@ -22,8 +24,14 @@ class User(Base):
     role = Column(String)  # Менеджер, Колорист, Директор
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True)  # Директору филиал не нужен
 
-    # Поле для хранения токена входа и активной сессии
+    # Постоянный логин-токен сотрудника (аналог пароля, не меняется при входе)
     token = Column(String, unique=True, index=True, nullable=True)
+
+    # Сессионный токен с ограниченным сроком действия — выдаётся заново при каждом входе,
+    # именно он живёт в cookie. Позволяет ограничить срок жизни активной сессии, не трогая
+    # постоянный логин-токен пользователя.
+    session_token = Column(String, unique=True, index=True, nullable=True)
+    session_expires_at = Column(DateTime, nullable=True)
 
     branch = relationship("Branch", back_populates="users")
 
@@ -45,7 +53,7 @@ class Order(Base):
     branch_id = Column(Integer, ForeignKey("branches.id"))
     client_id = Column(Integer, ForeignKey("clients.id"))
     manager_id = Column(Integer, ForeignKey("users.id"))
-    colorist_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # <-- Добавлено поле колориста
+    colorist_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     car = Column(String)
     detail = Column(String)
@@ -75,14 +83,15 @@ class Order(Base):
     rework_photo_after = Column(String, nullable=True)
     rework_photo_test = Column(String, nullable=True)
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=utc_now)
     deadline_at = Column(DateTime)
     issued_at = Column(DateTime, nullable=True)  # Точное время сдачи заказа (переход в статус "Выдано")
 
     branch = relationship("Branch", back_populates="orders")
     client = relationship("Client", back_populates="orders")
 
-    # <-- Добавлены явные связи, чтобы SQLAlchemy понимала, кто менеджер, а кто колорист
+    # Явные foreign_keys обязательны: два FK на users.id (manager_id, colorist_id) —
+    # без этого SQLAlchemy не может понять, какая связь к какой колонке относится.
     manager = relationship("User", foreign_keys=[manager_id])
     colorist = relationship("User", foreign_keys=[colorist_id])
 
@@ -93,7 +102,7 @@ class Shift(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     branch_id = Column(Integer, ForeignKey("branches.id"))
 
-    start_time = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    start_time = Column(DateTime, default=utc_now)
     start_photos = Column(String, nullable=True)  # Ссылки на утренние фото через запятую
 
     end_time = Column(DateTime, nullable=True)

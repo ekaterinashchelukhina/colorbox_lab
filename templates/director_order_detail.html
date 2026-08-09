@@ -3,30 +3,30 @@
 {% block title %}Заказ #{{ order.id }} - ColorBox Lab{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width: 900px; margin: 0 auto;">
+<div class="card order-page-container">
     <!-- Шапка -->
-    <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 20px;">
-        <h2 style="margin: 0; color: #2c3e50;">Заказ #{{ order.id }}</h2>
-        <span style="background: #ecf0f1; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; color: #34495e;">{{ order.status }}</span>
+    <div class="card-header order-header-toolbar">
+        <h2 class="order-title">Заказ #{{ order.id }}</h2>
+        <span class="status-badge">{{ order.status }}</span>
         {% if order.rework_count > 0 %}
-        <span style="background: #8e44ad; color: white; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold;">🎨 Доколеровка №{{ order.rework_count }}</span>
+        <span class="rework-badge">🎨 Доколеровка №{{ order.rework_count }}</span>
         {% endif %}
 
-        <a href="/order/{{ order.id }}/print" target="_blank" style="background: #2c3e50; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px; font-weight: bold; font-size: 14px; margin-left: auto;">🖨 Печать</a>
-        <a href="javascript:history.back()" style="color: #7f8c8d; text-decoration: none; font-weight: bold; margin-left: 15px;">← Назад к списку</a>
+        <a href="/order/{{ order.id }}/print" target="_blank" class="btn-print-link">🖨 Печать</a>
+        <a href="javascript:history.back()" class="link-back-muted">← Назад к списку</a>
     </div>
 
     <!-- Данные заказа -->
-    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-        <div style="flex: 1; min-width: 300px; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1; box-sizing: border-box;">
-            <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">Данные по подбору</h3>
-            <p style="margin: 8px 0;"><strong>Автомобиль:</strong> {{ order.car }}</p>
-            <p style="margin: 8px 0;"><strong>Деталь:</strong> {{ order.detail }}</p>
-            <p style="margin: 8px 0;"><strong>Тип услуги:</strong> <span style="background: #8e44ad; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">{{ order.service_type }}</span></p>
-            <p style="margin: 12px 0 8px 0;"><strong>Код краски:</strong> <span style="font-size: 18px; color: #e74c3c; font-weight: bold;">{{ order.paint_code }}</span></p>
-            <p style="margin: 8px 0;"><strong>Требуемый объем:</strong> {{ order.target_volume }} мл</p>
+    <div class="detail-columns-row">
+        <div class="order-data-panel">
+            <h3 class="panel-heading">Данные по подбору</h3>
+            <p class="field-row"><strong>Автомобиль:</strong> {{ order.car }}</p>
+            <p class="field-row"><strong>Деталь:</strong> {{ order.detail }}</p>
+            <p class="field-row"><strong>Тип услуги:</strong> <span class="service-type-badge">{{ order.service_type }}</span></p>
+            <p class="paint-code-row"><strong>Код краски:</strong> <span class="paint-code-value">{{ order.paint_code }}</span></p>
+            <p class="field-row"><strong>Требуемый объем:</strong> {{ order.target_volume }} мл</p>
             {% if order.actual_volume %}
-            <p style="margin: 8px 0; color: #27ae60;"><strong>Фактический объем:</strong> {{ order.actual_volume }} г</p>
+            <p class="actual-volume-value"><strong>Фактический объем:</strong> {{ order.actual_volume }} г</p>
             {% endif %}
             <p style="margin: 8px 0; margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 10px;">
                 <strong>Колорист:</strong>
@@ -36,17 +36,17 @@
             </p>
         </div>
 
-        <div style="flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box;">
-            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1;">
-                <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">Клиент и сроки</h3>
-                <p style="margin: 8px 0;"><strong>Имя (СТО):</strong>
+        <div class="detail-side-column">
+            <div class="client-info-panel">
+                <h3 class="panel-heading">Клиент и сроки</h3>
+                <p class="field-row"><strong>Имя (СТО):</strong>
                     {% if order.client %}
-                        <a href="/client/{{ order.client.id }}" style="color: #2980b9; font-weight: bold; text-decoration: none;">{{ order.client.name }}</a>
+                        <a href="/client/{{ order.client.id }}" class="client-name-link">{{ order.client.name }}</a>
                     {% else %}
                         Не указан
                     {% endif %}
                 </p>
-                <p style="margin: 8px 0;"><strong>Дедлайн:</strong>
+                <p class="field-row"><strong>Дедлайн:</strong>
                     {% if order.deadline_at %}
                         {{ order.deadline_at.strftime('%d.%m.%Y') }}
                     {% else %}
@@ -56,8 +56,8 @@
             </div>
 
             <!-- Блок Финансы (Только для просмотра) -->
-            <div style="background: #e8f6f3; padding: 20px; border-radius: 8px; border: 1px solid #1abc9c;">
-                <h3 style="margin-top: 0; color: #16a085; font-size: 16px; border-bottom: 1px solid #a3e4d7; padding-bottom: 8px;">Финансы и Оплата</h3>
+            <div class="finance-panel">
+                <h3 class="finance-heading">Финансы и Оплата</h3>
                 <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
                     <div>
                         <span style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 3px; color: #2c3e50;">Итоговая стоимость:</span>
@@ -74,20 +74,20 @@
     </div>
 
     <!-- Блок комментариев (Только для чтения) -->
-    <div style="margin-top: 30px; background: #fdfefe; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1;">
-        <h3 style="margin-top: 0; color: #2c3e50; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 8px;">Примечания к заказу</h3>
+    <div class="comments-panel">
+        <h3 class="panel-heading">Примечания к заказу</h3>
 
-        <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px;">
-            <div style="flex: 1; min-width: 280px;">
-                <label style="font-size: 13px; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 5px;">Комментарий колориста:</label>
-                <div style="padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; color: #2c3e50; min-height: 50px; font-size: 14px;">
+        <div class="comments-row">
+            <div class="comment-column">
+                <label class="field-label-muted">Комментарий колориста:</label>
+                <div class="comment-readonly-box">
                     {{ order.colorist_comment if order.colorist_comment else "Колорист ничего не написал." }}
                 </div>
             </div>
 
-            <div style="flex: 1; min-width: 280px;">
-                <label style="font-size: 13px; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 5px;">Комментарий менеджера:</label>
-                <div style="padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef; color: #2c3e50; min-height: 50px; font-size: 14px;">
+            <div class="comment-column">
+                <label class="field-label-muted">Комментарий менеджера:</label>
+                <div class="comment-readonly-box">
                     {{ order.manager_comment if order.manager_comment else "Комментарий отсутствует." }}
                 </div>
             </div>
@@ -95,25 +95,26 @@
     </div>
 
     <!-- Блок фотографий (Фотоконтроль - Только просмотр) -->
-    <div style="margin-top: 30px;">
-        <h3 style="color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px;">
+    {% set requires_full_photo_set = order.service_type in ['Подбор', 'Экспресс-подбор'] %}
+    <div class="photo-section">
+        <h3 class="page-section-heading">
             Фотоконтроль
-            {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}
+            {% if requires_full_photo_set %}
                 (3 этапа)
             {% else %}
                 (Только весы)
             {% endif %}
         </h3>
 
-        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+        <div class="photo-panels-row">
 
-            {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}
+            {% if requires_full_photo_set %}
             <!-- 1. Деталь ДО -->
-            <div style="flex: 1; min-width: 250px; background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ecf0f1; box-sizing: border-box;">
-                <h4 style="margin-top: 0; color: #34495e; font-size: 14px;">1. Деталь ДО работы</h4>
+            <div class="photo-panel-before">
+                <h4 class="photo-panel-title-before">1. Деталь ДО работы</h4>
                 {% if order.photo_detail %}
                     <a href="/{{ order.photo_detail if not order.photo_detail.startswith('/') else order.photo_detail[1:] }}" target="_blank">
-                        <img src="/{{ order.photo_detail if not order.photo_detail.startswith('/') else order.photo_detail[1:] }}" alt="Деталь до" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                        <img src="/{{ order.photo_detail if not order.photo_detail.startswith('/') else order.photo_detail[1:] }}" alt="Деталь до" class="photo-thumb-linked" />
                     </a>
                 {% else %}
                     <div style="height: 180px; background: #ecf0f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #95a5a6; border: 2px dashed #bdc3c7; font-size: 13px;">Фото отсутствует</div>
@@ -122,26 +123,26 @@
             {% endif %}
 
             <!-- 2. Краска на весах -->
-            <div style="flex: 1; min-width: 250px; background: #fff8e1; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ffe082; box-sizing: border-box;">
-                <h4 style="margin-top: 0; color: #d35400; font-size: 14px;">
-                    {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}2. {% endif %}Краска на весах
+            <div class="photo-panel-scales">
+                <h4 class="photo-panel-title-scales">
+                    {% if requires_full_photo_set %}2. {% endif %}Краска на весах
                 </h4>
                 {% if order.photo_scales %}
                     <a href="/{{ order.photo_scales if not order.photo_scales.startswith('/') else order.photo_scales[1:] }}" target="_blank">
-                        <img src="/{{ order.photo_scales if not order.photo_scales.startswith('/') else order.photo_scales[1:] }}" alt="Весы" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                        <img src="/{{ order.photo_scales if not order.photo_scales.startswith('/') else order.photo_scales[1:] }}" alt="Весы" class="photo-thumb-linked" />
                     </a>
                 {% else %}
                     <div style="height: 180px; background: #fff3e0; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #e67e22; border: 2px dashed #ffb74d; font-size: 13px;">Фото отсутствует</div>
                 {% endif %}
             </div>
 
-            {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}
+            {% if requires_full_photo_set %}
             <!-- 3. Деталь ПОСЛЕ -->
-            <div style="flex: 1; min-width: 250px; background: #e8f8f5; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #a3e4d7; box-sizing: border-box;">
-                <h4 style="margin-top: 0; color: #16a085; font-size: 14px;">3. Деталь ПОСЛЕ работы</h4>
+            <div class="photo-panel-after">
+                <h4 class="photo-panel-title-after">3. Деталь ПОСЛЕ работы</h4>
                 {% if order.photo_after %}
                     <a href="/{{ order.photo_after if not order.photo_after.startswith('/') else order.photo_after[1:] }}" target="_blank">
-                        <img src="/{{ order.photo_after if not order.photo_after.startswith('/') else order.photo_after[1:] }}" alt="Деталь после" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                        <img src="/{{ order.photo_after if not order.photo_after.startswith('/') else order.photo_after[1:] }}" alt="Деталь после" class="photo-thumb-linked" />
                     </a>
                 {% else %}
                     <div style="height: 180px; background: #e0f2f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #1abc9c; border: 2px dashed #80cbc4; font-size: 13px;">Фото отсутствует</div>
@@ -151,11 +152,11 @@
 
             {% if order.service_type != 'Готовая автоэмаль' %}
             <!-- Фото рецепта -->
-            <div style="flex: 1; min-width: 250px; background: #eaf2fb; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #aecbe8; box-sizing: border-box;">
-                <h4 style="margin-top: 0; color: #2c3e50; font-size: 14px;">Фото рецепта {% if order.service_type == 'Слив по коду' %}(опционально){% endif %}</h4>
+            <div class="photo-panel-recipe">
+                <h4 class="photo-panel-title-recipe">Фото рецепта {% if order.service_type == 'Слив по коду' %}(опционально){% endif %}</h4>
                 {% if order.recipe_photo %}
                     <a href="/{{ order.recipe_photo if not order.recipe_photo.startswith('/') else order.recipe_photo[1:] }}" target="_blank">
-                        <img src="/{{ order.recipe_photo if not order.recipe_photo.startswith('/') else order.recipe_photo[1:] }}" alt="Рецепт" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                        <img src="/{{ order.recipe_photo if not order.recipe_photo.startswith('/') else order.recipe_photo[1:] }}" alt="Рецепт" class="photo-thumb-linked" />
                     </a>
                 {% else %}
                     <div style="height: 180px; background: #eaf2fb; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #5d8fc2; border: 2px dashed #aecbe8; font-size: 13px;">Фото отсутствует</div>
@@ -168,40 +169,40 @@
 
     {% if order.rework_count > 0 %}
     <!-- Блок фотографий доколеровки (Только просмотр) -->
-    <div style="margin-top: 30px;">
-        <h3 style="color: #8e44ad; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px;">🎨 Фотоконтроль доколеровки №{{ order.rework_count }}</h3>
+    <div class="photo-section">
+        <h3 class="photo-section-heading-rework">🎨 Фотоконтроль доколеровки №{{ order.rework_count }}</h3>
 
-        <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
-            <div style="flex: 1; min-width: 250px; background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box;">
-                <h4 style="margin-top: 0; color: #8e44ad; font-size: 14px;">1. Краска на весах</h4>
+        <div class="photo-panels-row">
+            <div class="photo-panel-rework">
+                <h4 class="photo-panel-title-rework">1. Краска на весах</h4>
                 {% if order.rework_photo_scales %}
                     <a href="/{{ order.rework_photo_scales if not order.rework_photo_scales.startswith('/') else order.rework_photo_scales[1:] }}" target="_blank">
-                        <img src="/{{ order.rework_photo_scales if not order.rework_photo_scales.startswith('/') else order.rework_photo_scales[1:] }}" alt="Весы (доколеровка)" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                        <img src="/{{ order.rework_photo_scales if not order.rework_photo_scales.startswith('/') else order.rework_photo_scales[1:] }}" alt="Весы (доколеровка)" class="photo-thumb-linked" />
                     </a>
                 {% else %}
-                    <div style="height: 180px; background: #f4ecf7; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #a569bd; border: 2px dashed #d7bde2; font-size: 13px;">Фото отсутствует</div>
+                    <div class="photo-placeholder-rework-view">Фото отсутствует</div>
                 {% endif %}
             </div>
 
-            <div style="flex: 1; min-width: 250px; background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box;">
-                <h4 style="margin-top: 0; color: #8e44ad; font-size: 14px;">2. Образец после работы</h4>
+            <div class="photo-panel-rework">
+                <h4 class="photo-panel-title-rework">2. Образец после работы</h4>
                 {% if order.rework_photo_after %}
                     <a href="/{{ order.rework_photo_after if not order.rework_photo_after.startswith('/') else order.rework_photo_after[1:] }}" target="_blank">
-                        <img src="/{{ order.rework_photo_after if not order.rework_photo_after.startswith('/') else order.rework_photo_after[1:] }}" alt="Образец после доколеровки" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                        <img src="/{{ order.rework_photo_after if not order.rework_photo_after.startswith('/') else order.rework_photo_after[1:] }}" alt="Образец после доколеровки" class="photo-thumb-linked" />
                     </a>
                 {% else %}
-                    <div style="height: 180px; background: #f4ecf7; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #a569bd; border: 2px dashed #d7bde2; font-size: 13px;">Фото отсутствует</div>
+                    <div class="photo-placeholder-rework-view">Фото отсутствует</div>
                 {% endif %}
             </div>
 
-            <div style="flex: 1; min-width: 250px; background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box;">
-                <h4 style="margin-top: 0; color: #8e44ad; font-size: 14px;">3. Тест-напыл (старый и новый)</h4>
+            <div class="photo-panel-rework">
+                <h4 class="photo-panel-title-rework">3. Тест-напыл (старый и новый)</h4>
                 {% if order.rework_photo_test %}
                     <a href="/{{ order.rework_photo_test if not order.rework_photo_test.startswith('/') else order.rework_photo_test[1:] }}" target="_blank">
-                        <img src="/{{ order.rework_photo_test if not order.rework_photo_test.startswith('/') else order.rework_photo_test[1:] }}" alt="Тест-напыл" style="max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd;" />
+                        <img src="/{{ order.rework_photo_test if not order.rework_photo_test.startswith('/') else order.rework_photo_test[1:] }}" alt="Тест-напыл" class="photo-thumb-linked" />
                     </a>
                 {% else %}
-                    <div style="height: 180px; background: #f4ecf7; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #a569bd; border: 2px dashed #d7bde2; font-size: 13px;">Фото отсутствует</div>
+                    <div class="photo-placeholder-rework-view">Фото отсутствует</div>
                 {% endif %}
             </div>
         </div>

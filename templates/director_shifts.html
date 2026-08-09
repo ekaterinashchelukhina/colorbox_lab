@@ -15,6 +15,8 @@
         </a>
     </div>
 
+    {% set filter_qs = "branch_id=" ~ filters.branch_id|urlencode ~ "&colorist_id=" ~ filters.colorist_id|urlencode ~ "&date_from=" ~ filters.date_from|urlencode ~ "&date_to=" ~ filters.date_to|urlencode %}
+
     <!-- Фильтры -->
     <form action="/director/shifts" method="get" class="bg-white p-4 rounded-xl border border-[#ecf0f1] shadow-sm flex flex-wrap gap-3 items-end">
         <div class="flex flex-col gap-1">
@@ -47,7 +49,7 @@
         </div>
         <button type="submit" class="bg-[#3498db] hover:bg-[#2980b9] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">Применить</button>
         <a href="/director/shifts" class="bg-[#ecf0f1] hover:bg-[#dfe4e6] text-[#2c3e50] px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">Сбросить</a>
-        <a href="/director/shifts/print?branch_id={{ filters.branch_id }}&colorist_id={{ filters.colorist_id }}&date_from={{ filters.date_from }}&date_to={{ filters.date_to }}"
+        <a href="/director/shifts/print?{{ filter_qs }}"
            target="_blank"
            class="bg-[#2c3e50] hover:bg-[#1a252f] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors sm:ml-auto">
             🖨 PDF / Печать
@@ -75,14 +77,14 @@
                     <td class="p-4 font-bold text-[#3498db]">{{ shift.user.username if shift.user else '—' }}</td>
                     <td class="p-4 font-bold">
                         {% if shift.start_time %}
-                            {{ shift.start_time.strftime('%d.%m.%Y %H:%M') }}
+                            <span class="local-time" data-utc="{{ shift.start_time.isoformat() }}">{{ shift.start_time.strftime('%d.%m.%Y %H:%M') }}</span>
                         {% else %}
                             —
                         {% endif %}
                     </td>
                     <td class="p-4 font-bold">
                         {% if shift.end_time %}
-                            {{ shift.end_time.strftime('%d.%m.%Y %H:%M') }}
+                            <span class="local-time" data-utc="{{ shift.end_time.isoformat() }}">{{ shift.end_time.strftime('%d.%m.%Y %H:%M') }}</span>
                         {% else %}
                             <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Идет сейчас</span>
                         {% endif %}
@@ -119,7 +121,7 @@
                 <div>Начало: <br>
                     <strong class="text-gray-800">
                         {% if shift.start_time %}
-                            {{ shift.start_time.strftime('%d.%m %H:%M') }}
+                            <span class="local-time" data-format="datetime-short" data-utc="{{ shift.start_time.isoformat() }}">{{ shift.start_time.strftime('%d.%m %H:%M') }}</span>
                         {% else %}
                             —
                         {% endif %}
@@ -128,7 +130,7 @@
                 <div class="text-right">Конец: <br>
                     <strong class="text-gray-800">
                         {% if shift.end_time %}
-                            {{ shift.end_time.strftime('%d.%m %H:%M') }}
+                            <span class="local-time" data-format="datetime-short" data-utc="{{ shift.end_time.isoformat() }}">{{ shift.end_time.strftime('%d.%m %H:%M') }}</span>
                         {% else %}
                             —
                         {% endif %}
@@ -144,5 +146,17 @@
         <div class="text-center text-[#7f8c8d] py-10 bg-white rounded-xl border border-[#ecf0f1]">Смен пока нет.</div>
         {% endfor %}
     </div>
+
+    {% if total_pages > 1 %}
+    <div class="flex items-center justify-between bg-white p-3 rounded-xl border border-[#ecf0f1] shadow-sm text-sm mt-4">
+        <span class="text-[#7f8c8d]">Стр. {{ page }} из {{ total_pages }} (всего {{ total }})</span>
+        <div class="flex gap-2">
+            <a href="?{{ filter_qs }}&page={{ page - 1 }}"
+               class="bg-[#ecf0f1] {% if page <= 1 %}pointer-events-none opacity-40{% else %}hover:bg-[#dfe4e6]{% endif %} text-[#2c3e50] px-4 py-2 rounded-lg font-bold transition-colors">← Пред</a>
+            <a href="?{{ filter_qs }}&page={{ page + 1 }}"
+               class="bg-[#ecf0f1] {% if page >= total_pages %}pointer-events-none opacity-40{% else %}hover:bg-[#dfe4e6]{% endif %} text-[#2c3e50] px-4 py-2 rounded-lg font-bold transition-colors">След →</a>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

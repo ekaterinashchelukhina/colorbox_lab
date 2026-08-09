@@ -4,25 +4,25 @@
 
 {% block content %}
 <div class="card" style="max-width: 500px; margin: 0 auto;">
-    <h2 style="color: #2c3e50; margin-top: 0; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px;">Новый клиент</h2>
+    <h2 class="card-form-title">Новый клиент</h2>
 
-    <form action="/new-client" method="post" style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px;">
+    <form action="/new-client" method="post" class="form-stack">
         <div>
-            <label style="font-size: 13px; font-weight: bold; color: #34495e;">Имя клиента (ФИО или СТО)</label>
-            <input type="text" name="client_name" required="required" placeholder="Например: Иванов Иван или Гараж-55" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
+            <label class="field-label">Имя клиента (ФИО или СТО)</label>
+            <input type="text" name="client_name" required="required" placeholder="Например: Иванов Иван или Гараж-55" class="form-input" />
         </div>
 
         <div>
-            <label style="font-size: 13px; font-weight: bold; color: #34495e;">Филиал</label>
+            <label class="field-label">Филиал</label>
             <select disabled style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box; background: #f4f4f9; color: #2c3e50; font-weight: bold;">
                 <option>{{ branch.name if branch else "Филиал не назначен" }}</option>
             </select>
             <input type="hidden" name="branch_id" value="{{ branch.id if branch else '' }}">
         </div>
 
-        <div style="display: flex; justify-content: space-between; margin-top: 15px; align-items: center;">
-            <a href="/clients" style="color: #7f8c8d; text-decoration: none; font-weight: bold;">Отмена</a>
-            <button type="submit" style="background: #2ecc71; color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px;">Сохранить</button>
+        <div class="form-actions">
+            <a href="/clients" class="link-muted">Отмена</a>
+            <button type="submit" class="btn-primary">Сохранить</button>
         </div>
     </form>
 </div>

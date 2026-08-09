@@ -1,0 +1,9 @@
+[Unit]
+Description=ColorBox Lab DB backup
+
+[Service]
+Type=oneshot
+User=colorbox
+Group=colorbox
+EnvironmentFile=/opt/colorbox/colorbox.env
+ExecStart=/opt/colorbox/deploy/backup_db.sh

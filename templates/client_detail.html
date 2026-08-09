@@ -6,18 +6,18 @@
 <div class="card">
     <div class="card-header">
         <h2 style="margin: 0;">{{ client.name }}</h2>
-        <a href="javascript:history.back()" style="color: #7f8c8d; text-decoration: none; font-weight: bold;">← Назад</a>
+        <a href="javascript:history.back()" class="link-muted">← Назад</a>
     </div>
 
     <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px; margin-bottom: 30px;">
         <p style="margin: 5px 0;"><strong>Всего заказов:</strong> {{ client.orders|length }}</p>
     </div>
 
-    <h3 style="color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px;">История заказов</h3>
+    <h3 class="page-section-heading">История заказов</h3>
 
     <form method="get" action="/client/{{ client.id }}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
         <div>
-            <label style="font-size: 12px; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 4px; text-transform: uppercase;">Тип услуги</label>
+            <label class="filter-label">Тип услуги</label>
             <select name="service_type" style="padding: 8px; border-radius: 5px; border: 1px solid #bdc3c7; background: white;">
                 <option value="">Все типы</option>
                 {% for st in service_types %}
@@ -26,12 +26,12 @@
             </select>
         </div>
         <div>
-            <label style="font-size: 12px; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 4px; text-transform: uppercase;">С даты</label>
-            <input type="date" name="date_from" value="{{ filters.date_from }}" style="padding: 8px; border-radius: 5px; border: 1px solid #bdc3c7;">
+            <label class="filter-label">С даты</label>
+            <input type="date" name="date_from" value="{{ filters.date_from }}" class="date-input">
         </div>
         <div>
-            <label style="font-size: 12px; font-weight: bold; color: #7f8c8d; display: block; margin-bottom: 4px; text-transform: uppercase;">По дату</label>
-            <input type="date" name="date_to" value="{{ filters.date_to }}" style="padding: 8px; border-radius: 5px; border: 1px solid #bdc3c7;">
+            <label class="filter-label">По дату</label>
+            <input type="date" name="date_to" value="{{ filters.date_to }}" class="date-input">
         </div>
         <button type="submit" style="background: #3498db; color: white; border: none; padding: 9px 18px; border-radius: 5px; cursor: pointer; font-weight: bold;">Применить</button>
         <a href="/client/{{ client.id }}" style="background: #ecf0f1; color: #2c3e50; padding: 9px 18px; border-radius: 5px; text-decoration: none; font-weight: bold;">Сбросить</a>
@@ -41,36 +41,38 @@
         <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
             <thead>
                 <tr style="background: #2c3e50; color: white;">
-                    <th style="padding: 10px; text-align: left;">№</th>
-                    <th style="padding: 10px; text-align: left;">Дата</th>
-                    <th style="padding: 10px; text-align: left;">Автомобиль</th>
-                    <th style="padding: 10px; text-align: left;">Код краски</th>
-                    <th style="padding: 10px; text-align: left;">Деталь</th>
-                    <th style="padding: 10px; text-align: left;">Тип услуги</th>
-                    <th style="padding: 10px; text-align: left;">Объем</th>
-                    <th style="padding: 10px; text-align: left;">Статус</th>
-                    <th style="padding: 10px; text-align: left;">Действие</th>
+                    <th class="table-header-cell">№</th>
+                    <th class="table-header-cell">Дата</th>
+                    <th class="table-header-cell">Автомобиль</th>
+                    <th class="table-header-cell">Код краски</th>
+                    <th class="table-header-cell">Деталь</th>
+                    <th class="table-header-cell">Тип услуги</th>
+                    <th class="table-header-cell">Объем</th>
+                    <th class="table-header-cell">Статус</th>
+                    <th class="table-header-cell">Действие</th>
                 </tr>
             </thead>
             <tbody>
                 {% for order in orders %}
                 <tr style="border-bottom: 1px solid #eee;">
-                    <td style="padding: 10px;">
-                        <a href="/order/{{ order.id }}" style="font-weight: bold; color: #2980b9; text-decoration: none;">#{{ order.id }}</a>
+                    <td class="table-body-cell">
+                        <a href="/order/{{ order.id }}" class="client-name-link">#{{ order.id }}</a>
                     </td>
-                    <td style="padding: 10px; white-space: nowrap;">{{ order.created_at.strftime('%d.%m.%Y') if order.created_at else "—" }}</td>
-                    <td style="padding: 10px;">{{ order.car }}</td>
-                    <td style="padding: 10px;"><strong>{{ order.paint_code }}</strong></td>
-                    <td style="padding: 10px;">{{ order.detail }}</td>
-                    <td style="padding: 10px;">{{ order.service_type }}</td>
-                    <td style="padding: 10px;">{{ order.actual_volume if order.actual_volume else order.target_volume }} мл</td>
-                    <td style="padding: 10px;">
+                    <td style="padding: 10px; white-space: nowrap;">
+                        {% if order.created_at %}<span class="local-time" data-format="date" data-utc="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%d.%m.%Y') }}</span>{% else %}—{% endif %}
+                    </td>
+                    <td class="table-body-cell">{{ order.car }}</td>
+                    <td class="table-body-cell"><strong>{{ order.paint_code }}</strong></td>
+                    <td class="table-body-cell">{{ order.detail }}</td>
+                    <td class="table-body-cell">{{ order.service_type }}</td>
+                    <td class="table-body-cell">{{ order.actual_volume if order.actual_volume else order.target_volume }} мл</td>
+                    <td class="table-body-cell">
                         <span style="background: #ecf0f1; padding: 3px 8px; border-radius: 4px; font-size: 12px;">{{ order.status }}</span>
                         {% if order.rework_count > 0 %}
                         <span style="background: #8e44ad; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 4px;">🎨 Доколеровка ×{{ order.rework_count }}</span>
                         {% endif %}
                     </td>
-                    <td style="padding: 10px;">
+                    <td class="table-body-cell">
                         {% if order.status == "Выдано" %}
                         <form action="/order/{{ order.id }}/rework" method="post" onsubmit="return confirm('Отправить заказ на доколеровку? Заказ вернётся в очередь колориста.');">
                             <button type="submit" style="background: #8e44ad; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">🎨 Доколеровка</button>

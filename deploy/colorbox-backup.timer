@@ -1,0 +1,10 @@
+[Unit]
+Description=Ежедневный бэкап БД ColorBox Lab
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

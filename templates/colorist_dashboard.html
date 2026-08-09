@@ -14,9 +14,6 @@
             <span class="bg-gray-100 text-[#2c3e50] px-3 py-1.5 rounded-lg text-sm font-bold border border-gray-200">
                 👤 {{ username }}
             </span>
-            <a href="/logout" class="bg-red-50 text-[#e74c3c] hover:bg-red-100 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors border border-red-100">
-                Выйти
-            </a>
         </div>
     </div>
 
@@ -29,9 +26,6 @@
         </p>
 
         <form action="/shift/start" method="post" enctype="multipart/form-data" class="flex flex-col gap-5" id="start-shift-form">
-
-            <!-- СКРЫТОЕ ПОЛЕ ДЛЯ ПЕРЕДАЧИ ВРЕМЕНИ УСТРОЙСТВА -->
-            <input type="hidden" name="client_time" id="client_time_input">
 
             <!-- Сетка из 4 кнопок для фото -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -75,12 +69,9 @@
             <span class="text-green-800 font-bold text-base">Смена активна</span>
         </div>
 
-        <!-- ВЫВОДИМ ТОЧНОЕ ЛОКАЛЬНОЕ ВРЕМЯ УСТРОЙСТВА БЕЗ СДВИГОВ -->
-        <span class="text-green-700 text-sm font-bold bg-white px-3 py-1 rounded-lg border border-green-200" id="local_start_time"></span>
-        <script>
-            const deviceDate = new Date("{{ active_shift.start_time.strftime('%Y-%m-%dT%H:%M:%S') }}");
-            document.getElementById('local_start_time').innerText = "Старт: " + deviceDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-        </script>
+        <span class="text-green-700 text-sm font-bold bg-white px-3 py-1 rounded-lg border border-green-200">
+            Старт: <span class="local-time" data-format="time" data-utc="{{ active_shift.start_time.isoformat() }}">{{ active_shift.start_time.strftime('%H:%M') }}</span>
+        </span>
     </div>
 
     <!-- Очередь заказов -->
@@ -145,19 +136,8 @@
 
 </div>
 
-<!-- Скрипт для валидации фото и фиксации точного времени устройства -->
+<!-- Скрипт для валидации фото -->
 <script>
-    // Фиксируем локальное время устройства прямо перед отправкой формы старта
-    const startForm = document.getElementById('start-shift-form');
-    if (startForm) {
-        startForm.addEventListener('submit', function() {
-            const now = new Date();
-            const offsetMs = now.getTimezoneOffset() * 60 * 1000;
-            const localIso = new Date(now.getTime() - offsetMs).toISOString().slice(0, 19);
-            document.getElementById('client_time_input').value = localIso;
-        });
-    }
-
     function setupStrictPhotoValidation(inputIds, btnId, btnActiveText) {
         const inputs = inputIds.map(id => document.getElementById(id));
         const submitBtn = document.getElementById(btnId);

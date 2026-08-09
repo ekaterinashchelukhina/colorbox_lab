@@ -16,10 +16,10 @@
     </div>
 
     <!-- Уведомления об успешных действиях (создание/удаление) -->
-    {% if request.query_params.get('success') == 'user' %}
+    {% if request.query_params.get('success') == 'user' and new_token %}
     <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg shadow-sm">
         <div class="text-green-800 font-bold mb-1">✅ Сотрудник {{ request.query_params.get('new_name') }} успешно добавлен!</div>
-        <div class="text-sm text-green-700">Токен для входа: <span class="font-mono font-bold text-lg bg-white px-2 py-1 rounded border border-green-200 ml-1">{{ request.query_params.get('new_token') }}</span></div>
+        <div class="text-sm text-green-700">Токен для входа: <span class="font-mono font-bold text-lg bg-white px-2 py-1 rounded border border-green-200 ml-1">{{ new_token }}</span></div>
         <div class="text-xs text-green-600 mt-2 font-medium">⚠️ Обязательно скопируйте этот токен и передайте сотруднику, он показывается только один раз!</div>
     </div>
     {% elif request.query_params.get('success') == 'user_delete' %}

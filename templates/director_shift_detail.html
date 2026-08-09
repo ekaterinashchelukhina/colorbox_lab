@@ -29,7 +29,7 @@
         <div class="bg-white p-5 rounded-xl border border-[#ecf0f1] shadow-sm">
             <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-bold text-[#2c3e50]">УТРО (Открытие)</h3>
-                <span class="text-sm font-bold text-gray-500">{{ shift.start_time.strftime('%H:%M') if shift.start_time else '—' }}</span>
+                <span class="text-sm font-bold text-gray-500">{% if shift.start_time %}<span class="local-time" data-format="time" data-utc="{{ shift.start_time.isoformat() }}">{{ shift.start_time.strftime('%H:%M') }}</span>{% else %}—{% endif %}</span>
             </div>
 
             {% if start_photos_list %}
@@ -54,7 +54,7 @@
             <div class="flex justify-between items-center mb-4 border-b pb-2">
                 <h3 class="text-lg font-bold text-[#2c3e50]">ВЕЧЕР (Закрытие)</h3>
                 {% if shift.end_time %}
-                    <span class="text-sm font-bold text-gray-500">{{ shift.end_time.strftime('%H:%M') }}</span>
+                    <span class="text-sm font-bold text-gray-500"><span class="local-time" data-format="time" data-utc="{{ shift.end_time.isoformat() }}">{{ shift.end_time.strftime('%H:%M') }}</span></span>
                 {% else %}
                     <span class="text-sm font-bold text-[#f39c12]">Смена идет</span>
                 {% endif %}

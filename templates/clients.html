@@ -72,5 +72,18 @@
         </table>
     </div>
 
+    {% if total_pages > 1 %}
+    {% set filter_qs = "q=" ~ filters.q|urlencode ~ "&branch_id=" ~ filters.branch_id|urlencode %}
+    <div class="flex items-center justify-between bg-white p-3 rounded-xl border border-[#ecf0f1] shadow-sm text-sm">
+        <span class="text-[#7f8c8d]">Стр. {{ page }} из {{ total_pages }} (всего {{ total }})</span>
+        <div class="flex gap-2">
+            <a href="?{{ filter_qs }}&page={{ page - 1 }}"
+               class="bg-[#ecf0f1] {% if page <= 1 %}pointer-events-none opacity-40{% else %}hover:bg-[#dfe4e6]{% endif %} text-[#2c3e50] px-4 py-2 rounded-lg font-bold transition-colors">← Пред</a>
+            <a href="?{{ filter_qs }}&page={{ page + 1 }}"
+               class="bg-[#ecf0f1] {% if page >= total_pages %}pointer-events-none opacity-40{% else %}hover:bg-[#dfe4e6]{% endif %} text-[#2c3e50] px-4 py-2 rounded-lg font-bold transition-colors">След →</a>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 {% endblock %}

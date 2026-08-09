@@ -4,14 +4,12 @@
 
 {% block content %}
 <div class="card" style="max-width: 600px; margin: 0 auto;">
-    <h2 style="color: #2c3e50; margin-top: 0; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px;">Оформление нового заказа</h2>
+    <h2 class="card-form-title">Оформление нового заказа</h2>
 
-    <form action="/new-order" method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px;" id="new-order-form">
-        <input type="hidden" name="client_time" id="client_time_input_new_order">
-
+    <form action="/new-order" method="post" enctype="multipart/form-data" class="form-stack" id="new-order-form">
         <div>
-            <label style="font-size: 13px; font-weight: bold; color: #34495e;">Имя клиента (ФИО или СТО)</label>
-            <input type="text" name="client_name" required="required" list="clients-datalist" autocomplete="off" placeholder="Например: Иванов Иван или Гараж-55" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
+            <label class="field-label">Имя клиента (ФИО или СТО)</label>
+            <input type="text" name="client_name" required="required" list="clients-datalist" autocomplete="off" placeholder="Например: Иванов Иван или Гараж-55" class="form-input" />
             <datalist id="clients-datalist">
                 {% for c in clients %}
                 <option value="{{ c.name }}"></option>
@@ -19,20 +17,20 @@
             </datalist>
         </div>
 
-        <div style="display: flex; gap: 15px;">
-            <div style="flex: 1;">
-                <label style="font-size: 13px; font-weight: bold; color: #34495e;">Марка автомобиля</label>
-                <input type="text" name="car" required="required" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
+        <div class="form-row">
+            <div class="form-col">
+                <label class="field-label">Марка автомобиля</label>
+                <input type="text" name="car" required="required" class="form-input" />
             </div>
-            <div style="flex: 1;">
-                <label style="font-size: 13px; font-weight: bold; color: #34495e;">Код краски (необязательно)</label>
-                <input type="text" name="paint_code" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
+            <div class="form-col">
+                <label class="field-label">Код краски (необязательно)</label>
+                <input type="text" name="paint_code" class="form-input" />
             </div>
         </div>
 
         <div>
-            <label style="font-size: 13px; font-weight: bold; color: #34495e;">Деталь (образец)</label>
-            <select name="detail" required="required" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; background: white; box-sizing: border-box;">
+            <label class="field-label">Деталь (образец)</label>
+            <select name="detail" required="required" class="form-select">
                 <option value="Лючок бензобака">Лючок бензобака</option>
                 <option value="Крыло">Крыло</option>
                 <option value="Дверь">Дверь</option>
@@ -45,8 +43,8 @@
         </div>
 
         <div>
-            <label style="font-size: 13px; font-weight: bold; color: #34495e;">Тип услуги</label>
-            <select name="service_type" required="required" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; background: white; box-sizing: border-box;">
+            <label class="field-label">Тип услуги</label>
+            <select name="service_type" required="required" class="form-select">
                 <option value="Подбор">Подбор</option>
                 <option value="Слив по коду">Слив по коду</option>
                 <option value="Экспресс-подбор">Экспресс-подбор</option>
@@ -56,7 +54,7 @@
 
         <!-- Поле для комментария менеджера при создании -->
         <div>
-            <label style="font-size: 13px; font-weight: bold; color: #34495e;">Комментарий для колориста</label>
+            <label class="field-label">Комментарий для колориста</label>
             <textarea name="manager_comment" rows="2" placeholder="Например: Клиент просил подобрать точь-в-точь по лючку..." style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box; resize: vertical; font-family: inherit; font-size: 14px;"></textarea>
         </div>
 
@@ -66,34 +64,21 @@
             <input type="file" name="file" accept="image/*" capture="environment" style="width: 100%; font-size: 14px;" />
         </div>
 
-        <div style="display: flex; gap: 15px;">
-            <div style="flex: 1;">
-                <label style="font-size: 13px; font-weight: bold; color: #34495e;">Требуемый объем (мл)</label>
-                <input type="number" step="1" name="target_volume" required="required" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
+        <div class="form-row">
+            <div class="form-col">
+                <label class="field-label">Требуемый объем (мл)</label>
+                <input type="number" step="1" min="1" name="target_volume" required="required" class="form-input" />
             </div>
-            <div style="flex: 1;">
-                <label style="font-size: 13px; font-weight: bold; color: #34495e;">Дедлайн (дата выдачи)</label>
-                <input type="date" name="deadline" required="required" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
+            <div class="form-col">
+                <label class="field-label">Дедлайн (дата выдачи)</label>
+                <input type="date" name="deadline" required="required" class="form-input" />
             </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; margin-top: 15px; align-items: center;">
-            <a href="/dashboard" style="color: #7f8c8d; text-decoration: none; font-weight: bold;">Отмена</a>
-            <button type="submit" style="background: #2ecc71; color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 16px;">Создать заказ</button>
+        <div class="form-actions">
+            <a href="/dashboard" class="link-muted">Отмена</a>
+            <button type="submit" class="btn-primary">Создать заказ</button>
         </div>
     </form>
 </div>
-
-<script>
-    // Фиксируем локальное время устройства прямо перед отправкой формы создания заказа
-    const newOrderForm = document.getElementById('new-order-form');
-    if (newOrderForm) {
-        newOrderForm.addEventListener('submit', function() {
-            const now = new Date();
-            const offsetMs = now.getTimezoneOffset() * 60 * 1000;
-            const localIso = new Date(now.getTime() - offsetMs).toISOString().slice(0, 19);
-            document.getElementById('client_time_input_new_order').value = localIso;
-        });
-    }
-</script>
 {% endblock %}

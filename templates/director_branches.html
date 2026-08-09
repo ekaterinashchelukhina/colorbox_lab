@@ -24,6 +24,10 @@
     <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm">
         <div class="text-red-800 font-bold">Филиал удален.</div>
     </div>
+    {% elif request.query_params.get('error') == 'branch_in_use' %}
+    <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm">
+        <div class="text-red-800 font-bold">Нельзя удалить филиал: на нём ещё есть сотрудники, клиенты или заказы. Сначала перенесите или удалите их.</div>
+    </div>
     {% endif %}
 
     <!-- Форма добавления филиала -->
@@ -58,7 +62,7 @@
                     <td class="p-4 text-[#7f8c8d] font-medium">#{{ branch.id }}</td>
                     <td class="p-4 font-bold text-[#2c3e50] text-base">{{ branch.name }}</td>
                     <td class="p-4 text-center">
-                        <form action="/director/branch/delete/{{ branch.id }}" method="post" onsubmit="return confirm('Удалить филиал {{ branch.name }}? Это может повлиять на заказы и сотрудников, привязанных к нему.');">
+                        <form action="/director/branch/delete/{{ branch.id }}" method="post" onsubmit="return confirm('Удалить филиал {{ branch.name }}? Удаление невозможно, пока на нём есть сотрудники, клиенты или заказы.');">
                             <button type="submit" class="text-[#e74c3c] hover:text-[#c0392b] font-bold text-sm transition-colors">Удалить</button>
                         </form>
                     </td>

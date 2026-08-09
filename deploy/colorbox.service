@@ -1,0 +1,33 @@
+[Unit]
+Description=ColorBox Lab CRM
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+# Правим под реальный путь и пользователя на сервере. Не root — отдельный
+# непривилегированный системный пользователь (useradd --system --home /opt/colorbox colorbox).
+User=colorbox
+Group=colorbox
+WorkingDirectory=/opt/colorbox
+EnvironmentFile=/opt/colorbox/colorbox.env
+
+# --host 127.0.0.1: приложение слушает только локально, наружу торчит nginx (deploy/nginx.conf).
+# Если разрешить 0.0.0.0, кто угодно сможет достучаться до uvicorn напрямую в обход nginx —
+# то есть в обход TLS.
+# --proxy-headers: доверяем X-Forwarded-Proto от nginx, чтобы request.url.scheme корректно
+# показывал "https" — от этого зависит secure-флаг на cookie сессии (main.py). Дефолтный
+# forwarded-allow-ips=127.0.0.1 уже покрывает эту схему (nginx и приложение на одной машине).
+ExecStart=/opt/colorbox/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --proxy-headers
+
+# Перезапуск при падении — без этого один необработанный краш = простой до ручного вмешательства.
+Restart=always
+RestartSec=3
+
+# Небольшая защита на уровне systemd: процесс не может писать куда попало в системе.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/colorbox/static/uploads
+
+[Install]
+WantedBy=multi-user.target
