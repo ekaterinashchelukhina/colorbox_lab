@@ -64,6 +64,8 @@
                     <th class="p-4 font-bold">ID</th>
                     <th class="p-4 font-bold">Клиент / Авто</th>
                     <th class="p-4 font-bold">Код краски</th>
+                    <th class="p-4 font-bold">Принят</th>
+                    <th class="p-4 font-bold">Сдан</th>
                     <th class="p-4 font-bold">Факт. объем</th>
                     <th class="p-4 font-bold">Стоимость</th>
                     <th class="p-4 text-center font-bold">Действие</th>
@@ -81,6 +83,12 @@
                         {% endif %}
                     </td>
                     <td class="p-4 font-bold text-[#e74c3c] text-base">{{ order.paint_code }}</td>
+                    <td class="p-4 text-xs text-[#2c3e50] whitespace-nowrap">
+                        {{ order.created_at.strftime('%d.%m.%Y %H:%M') if order.created_at else "—" }}
+                    </td>
+                    <td class="p-4 text-xs text-[#2c3e50] whitespace-nowrap">
+                        {{ order.issued_at.strftime('%d.%m.%Y %H:%M') if order.issued_at else "—" }}
+                    </td>
                     <td class="p-4">
                         <span class="text-[#2c3e50] font-bold">
                             <!-- Если фактический объем не указан, показываем целевой -->
@@ -101,7 +109,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" class="p-10 text-center text-[#7f8c8d] text-[15px]">
+                    <td colspan="8" class="p-10 text-center text-[#7f8c8d] text-[15px]">
                         В архиве пока нет завершенных заказов.
                     </td>
                 </tr>
@@ -137,6 +145,11 @@
 
             <div class="text-[#e74c3c] font-bold text-lg mb-3">
                 {{ order.paint_code }}
+            </div>
+
+            <div class="text-xs text-[#7f8c8d] mb-3 leading-relaxed">
+                Принят: <span class="text-[#2c3e50] font-bold">{{ order.created_at.strftime('%d.%m.%Y %H:%M') if order.created_at else "—" }}</span><br>
+                Сдан: <span class="text-[#2c3e50] font-bold">{{ order.issued_at.strftime('%d.%m.%Y %H:%M') if order.issued_at else "—" }}</span>
             </div>
 
             <div class="flex justify-between items-center border-t border-[#ecf0f1] pt-3 mt-1">

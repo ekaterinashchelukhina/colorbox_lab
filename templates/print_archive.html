@@ -34,7 +34,8 @@
                 <th>Доколеровка</th>
                 <th>Филиал</th>
                 <th>Колорист</th>
-                <th>Дата</th>
+                <th>Принят</th>
+                <th>Сдан</th>
                 <th class="text-right">Объем</th>
                 <th class="text-right">Стоимость</th>
             </tr>
@@ -49,20 +50,21 @@
                 <td>{% if order.rework_count > 0 %}🎨 ×{{ order.rework_count }}{% else %}—{% endif %}</td>
                 <td>{{ order.branch.name if order.branch else "—" }}</td>
                 <td>{{ order.colorist.username if order.colorist else "—" }}</td>
-                <td>{{ order.created_at.strftime('%d.%m.%Y') if order.created_at else "—" }}</td>
+                <td>{{ order.created_at.strftime('%d.%m.%Y %H:%M') if order.created_at else "—" }}</td>
+                <td>{{ order.issued_at.strftime('%d.%m.%Y %H:%M') if order.issued_at else "—" }}</td>
                 <td class="text-right">{{ order.actual_volume if order.actual_volume else order.target_volume }} мл.</td>
                 <td class="text-right">{{ order.price }} ₽</td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="10" style="text-align: center; color: #7f8c8d; padding: 20px;">Заказов за выбранный период не найдено.</td>
+                <td colspan="11" style="text-align: center; color: #7f8c8d; padding: 20px;">Заказов за выбранный период не найдено.</td>
             </tr>
             {% endfor %}
         </tbody>
         {% if orders %}
         <tfoot>
             <tr>
-                <td colspan="9" class="text-right"><strong>Итого:</strong></td>
+                <td colspan="10" class="text-right"><strong>Итого:</strong></td>
                 <td class="text-right"><strong>{{ total_price }} ₽</strong></td>
             </tr>
         </tfoot>

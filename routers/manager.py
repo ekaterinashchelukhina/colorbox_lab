@@ -165,6 +165,8 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
                 order.actual_volume = actual_volume
         else:
             order.status = new_status
+            if new_status == "Выдано":
+                order.issued_at = datetime.now(timezone.utc)
         db.commit()
 
     return RedirectResponse(url="/colorist" if new_status == "Готово" else f"/order/{order_id}", status_code=303)
@@ -181,6 +183,7 @@ def send_order_to_rework(request: Request, order_id: int, db: Session = Depends(
         order.rework_photo_scales = None
         order.rework_photo_after = None
         order.rework_photo_test = None
+        order.issued_at = None
         db.commit()
     return RedirectResponse(url=f"/order/{order_id}", status_code=303)
 

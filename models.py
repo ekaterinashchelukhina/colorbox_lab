@@ -76,6 +76,7 @@ class Order(Base):
 
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     deadline_at = Column(DateTime)
+    issued_at = Column(DateTime, nullable=True)  # Точное время сдачи заказа (переход в статус "Выдано")
 
     recipe_items = relationship("RecipeItem", back_populates="order", cascade="all, delete-orphan")
     branch = relationship("Branch", back_populates="orders")
