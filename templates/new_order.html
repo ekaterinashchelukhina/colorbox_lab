@@ -6,7 +6,8 @@
 <div class="card" style="max-width: 600px; margin: 0 auto;">
     <h2 style="color: #2c3e50; margin-top: 0; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px;">Оформление нового заказа</h2>
 
-    <form action="/new-order" method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px;">
+    <form action="/new-order" method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 15px; margin-top: 20px;" id="new-order-form">
+        <input type="hidden" name="client_time" id="client_time_input_new_order">
 
         <div>
             <label style="font-size: 13px; font-weight: bold; color: #34495e;">Имя клиента (ФИО или СТО)</label>
@@ -77,4 +78,17 @@
         </div>
     </form>
 </div>
+
+<script>
+    // Фиксируем локальное время устройства прямо перед отправкой формы создания заказа
+    const newOrderForm = document.getElementById('new-order-form');
+    if (newOrderForm) {
+        newOrderForm.addEventListener('submit', function() {
+            const now = new Date();
+            const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+            const localIso = new Date(now.getTime() - offsetMs).toISOString().slice(0, 19);
+            document.getElementById('client_time_input_new_order').value = localIso;
+        });
+    }
+</script>
 {% endblock %}

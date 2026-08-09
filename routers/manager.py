@@ -86,7 +86,8 @@ def show_new_order_form(request: Request, db: Session = Depends(get_db)):
 def create_order(
         request: Request, client_name: str = Form(...), car: str = Form(...), detail: str = Form(...),
         paint_code: Optional[str] = Form(None), service_type: str = Form(...), target_volume: float = Form(...),
-        deadline: str = Form(...), manager_comment: str = Form(None), file: UploadFile = File(None),
+        deadline: str = Form(...), manager_comment: str = Form(None), client_time: str = Form(None),
+        file: UploadFile = File(None),
         db: Session = Depends(get_db), manager: User = Depends(require_login)
 ):
     if not manager.branch_id:
@@ -104,12 +105,13 @@ def create_order(
     deadline_dt = datetime.strptime(deadline, "%Y-%m-%d").replace(hour=18, minute=0, tzinfo=timezone.utc)
     is_express = True if service_type == "Экспресс-подбор" else False
     clean_paint_code = paint_code.strip() if paint_code else ""
+    created_dt = datetime.fromisoformat(client_time) if client_time else datetime.now(timezone.utc)
 
     new_order = Order(
         branch_id=manager.branch_id, client_id=client.id, manager_id=manager.id,
         car=car, detail=detail, paint_code=clean_paint_code, category="Не указана",
         service_type=service_type, target_volume=target_volume, is_express=is_express,
-        price=0.0, deadline_at=deadline_dt, manager_comment=manager_comment
+        price=0.0, deadline_at=deadline_dt, manager_comment=manager_comment, created_at=created_dt
     )
     db.add(new_order)
     db.commit()
@@ -137,6 +139,7 @@ def view_order(request: Request, order_id: int, db: Session = Depends(get_db),
 
 @router.post("/order/{order_id}/status")
 def update_order_status(request: Request, order_id: int, new_status: str = Form(...), actual_volume: float = Form(None),
+                        client_time: str = Form(None),
                         db: Session = Depends(get_db), user: User = Depends(require_login)):
     order = db.query(Order).filter(Order.id == order_id).first()
     if order:
@@ -166,7 +169,7 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
         else:
             order.status = new_status
             if new_status == "Выдано":
-                order.issued_at = datetime.now(timezone.utc)
+                order.issued_at = datetime.fromisoformat(client_time) if client_time else datetime.now(timezone.utc)
         db.commit()
 
     return RedirectResponse(url="/colorist" if new_status == "Готово" else f"/order/{order_id}", status_code=303)
