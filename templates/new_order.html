@@ -11,7 +11,12 @@
 
         <div>
             <label style="font-size: 13px; font-weight: bold; color: #34495e;">Имя клиента (ФИО или СТО)</label>
-            <input type="text" name="client_name" required="required" placeholder="Например: Иванов Иван или Гараж-55" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
+            <input type="text" name="client_name" required="required" list="clients-datalist" autocomplete="off" placeholder="Например: Иванов Иван или Гараж-55" style="width: 100%; padding: 10px; border-radius: 5px; border: 1px solid #bdc3c7; margin-top: 5px; box-sizing: border-box;" />
+            <datalist id="clients-datalist">
+                {% for c in clients %}
+                <option value="{{ c.name }}"></option>
+                {% endfor %}
+            </datalist>
         </div>
 
         <div style="display: flex; gap: 15px;">

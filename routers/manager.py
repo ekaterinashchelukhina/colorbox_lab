@@ -133,7 +133,8 @@ def show_new_order_form(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url="/")
     if _manager_shift_not_started(db, user):
         return RedirectResponse(url="/dashboard", status_code=303)
-    return templates.TemplateResponse(request=request, name="new_order.html")
+    clients = db.query(Client).filter(Client.branch_id == user.branch_id).order_by(Client.name).all()
+    return templates.TemplateResponse(request=request, name="new_order.html", context={"clients": clients})
 
 
 @router.post("/new-order")
@@ -312,9 +313,87 @@ def print_order(request: Request, order_id: int, db: Session = Depends(get_db),
                                       context={"order": order}) if order else RedirectResponse(url="/dashboard")
 
 
+@router.get("/clients")
+def view_clients(request: Request, q: Optional[str] = None, branch_id: Optional[str] = None,
+                 db: Session = Depends(get_db), user: User = Depends(require_login)):
+    user_role = user.role.capitalize() if user.role else ""
+    query = db.query(Client)
+
+    if user_role == "Директор":
+        if branch_id and branch_id.isdigit():
+            query = query.filter(Client.branch_id == int(branch_id))
+    else:
+        query = query.filter(Client.branch_id == user.branch_id)
+
+    if q:
+        query = query.filter(Client.name.ilike(f"%{q}%"))
+
+    clients = query.order_by(Client.name).all()
+
+    return templates.TemplateResponse(request=request, name="clients.html", context={
+        "clients": clients, "role": user_role,
+        "branches": db.query(Branch).all() if user_role == "Директор" else [],
+        "filters": {"q": q or "", "branch_id": branch_id or ""}
+    })
+
+
+@router.get("/new-client")
+def show_new_client_form(request: Request, db: Session = Depends(get_db), user: User = Depends(require_login)):
+    if not user.role or user.role.lower() != "менеджер":
+        return RedirectResponse(url="/clients", status_code=303)
+    branch = db.query(Branch).filter(Branch.id == user.branch_id).first()
+    return templates.TemplateResponse(request=request, name="new_client.html", context={"branch": branch})
+
+
+@router.post("/new-client")
+def create_client(request: Request, client_name: str = Form(...), branch_id: int = Form(...),
+                  db: Session = Depends(get_db), manager: User = Depends(require_login)):
+    if not manager.role or manager.role.lower() != "менеджер":
+        return RedirectResponse(url="/clients", status_code=303)
+    if not manager.branch_id:
+        return HTMLResponse("<h2>Ошибка: Нет привязки к филиалу!</h2>")
+    if branch_id != manager.branch_id:
+        return HTMLResponse("<h2>Ошибка: Нельзя добавить клиента в чужой филиал!</h2>")
+
+    clean_name = client_name.strip()
+    if not clean_name:
+        return HTMLResponse("<h2>Ошибка: Укажите имя клиента!</h2>")
+
+    existing = db.query(Client).filter(Client.name == clean_name, Client.branch_id == manager.branch_id).first()
+    if existing:
+        return RedirectResponse(url="/clients", status_code=303)
+
+    client = Client(name=clean_name, branch_id=manager.branch_id)
+    db.add(client)
+    db.commit()
+    return RedirectResponse(url="/clients", status_code=303)
+
+
 @router.get("/client/{client_id}")
-def view_client(request: Request, client_id: int, db: Session = Depends(get_db),
-                _: User = Depends(require_login)):
+def view_client(request: Request, client_id: int, date_from: Optional[str] = None, date_to: Optional[str] = None,
+                service_type: Optional[str] = None,
+                db: Session = Depends(get_db), _: User = Depends(require_login)):
     client = db.query(Client).filter(Client.id == client_id).first()
-    return templates.TemplateResponse(request=request, name="client_detail.html",
-                                      context={"client": client}) if client else RedirectResponse(url="/dashboard")
+    if not client:
+        return RedirectResponse(url="/dashboard")
+
+    query = db.query(Order).filter(Order.client_id == client_id)
+    if service_type:
+        query = query.filter(Order.service_type == service_type)
+    if date_from:
+        try:
+            query = query.filter(Order.created_at >= datetime.strptime(date_from, "%Y-%m-%d"))
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            query = query.filter(Order.created_at <= dt_to)
+        except ValueError:
+            pass
+    orders = query.order_by(Order.created_at.desc()).all()
+
+    return templates.TemplateResponse(request=request, name="client_detail.html", context={
+        "client": client, "orders": orders, "service_types": SERVICE_TYPES,
+        "filters": {"date_from": date_from or "", "date_to": date_to or "", "service_type": service_type or ""}
+    })

@@ -13,6 +13,9 @@
             <a href="/archive" class="flex-1 sm:flex-none text-center bg-[#34495e] hover:bg-[#2c3e50] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
                 🗄 Архив
             </a>
+            <a href="/clients" class="flex-1 sm:flex-none text-center bg-[#8e44ad] hover:bg-[#7d3c98] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
+                👥 Клиенты
+            </a>
             {% if active_shift %}
             <a href="/new-order" class="flex-1 sm:flex-none text-center bg-[#2ecc71] hover:bg-[#27ae60] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
                 + Новый заказ
@@ -71,7 +74,13 @@
                 {% for order in orders %}
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="p-4 font-bold text-[#34495e]">#{{ order.id }}</td>
-                    <td class="p-4 font-bold text-[#2c3e50]">{{ order.client.name if order.client else 'Неизвестно' }}</td>
+                    <td class="p-4 font-bold text-[#2c3e50]">
+                        {% if order.client %}
+                        <a href="/client/{{ order.client.id }}" class="text-[#2980b9] hover:underline">{{ order.client.name }}</a>
+                        {% else %}
+                        Неизвестно
+                        {% endif %}
+                    </td>
                     <td class="p-4 leading-tight">
                         {{ order.car }}<br />
                         <span class="text-xs text-[#7f8c8d]">{{ order.detail }}</span>
@@ -113,7 +122,13 @@
                 </span>
             </div>
 
-            <div class="mb-1 font-bold text-[#2c3e50]">{{ order.client.name if order.client else 'Неизвестно' }}</div>
+            <div class="mb-1 font-bold text-[#2c3e50]">
+                {% if order.client %}
+                <a href="/client/{{ order.client.id }}" class="text-[#2980b9] hover:underline">{{ order.client.name }}</a>
+                {% else %}
+                Неизвестно
+                {% endif %}
+            </div>
 
             <div class="text-sm text-gray-700 mb-2 leading-tight">
                 {{ order.car }} <br>

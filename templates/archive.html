@@ -86,7 +86,13 @@
                 <tr class="hover:bg-gray-50 transition-colors">
                     <td class="p-4 font-bold text-[#34495e]">#{{ order.id }}</td>
                     <td class="p-4 leading-tight">
-                        <span class="font-bold">{{ order.client.name if order.client else 'Неизвестно' }}</span><br>
+                        <span class="font-bold">
+                            {% if order.client %}
+                            <a href="/client/{{ order.client.id }}" class="text-[#2980b9] hover:underline">{{ order.client.name }}</a>
+                            {% else %}
+                            Неизвестно
+                            {% endif %}
+                        </span><br>
                         <span class="text-xs text-[#7f8c8d]">{{ order.car }} ({{ order.detail }})</span>
                         {% if order.rework_count > 0 %}
                         <br><span class="inline-block mt-1 bg-purple-100 text-purple-800 border border-purple-200 px-2 py-0.5 rounded text-[11px] font-bold uppercase">🎨 Доколеровка ×{{ order.rework_count }}</span>
@@ -141,7 +147,13 @@
                 </span>
             </div>
 
-            <div class="mb-1 font-bold text-[#2c3e50]">{{ order.client.name if order.client else 'Неизвестно' }}</div>
+            <div class="mb-1 font-bold text-[#2c3e50]">
+                {% if order.client %}
+                <a href="/client/{{ order.client.id }}" class="text-[#2980b9] hover:underline">{{ order.client.name }}</a>
+                {% else %}
+                Неизвестно
+                {% endif %}
+            </div>
 
             {% if order.rework_count > 0 %}
             <div class="mb-2">
