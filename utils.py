@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from database import get_db, utc_now
-from models import User
+from models import User, UserSession
 from storage import storage
 
 # С запасом под фото с телефона до сжатия (после сжатия — единицы сотен КБ). Проверяется
@@ -100,16 +100,18 @@ def parse_photo_list(photo_data) -> List[str]:
 
 def get_current_user(request: Request, db: Session = Depends(get_db)) -> Optional[User]:
     """Ищет пользователя по сессионному токену из cookie. Токен без действующей
-    session_expires_at (истёкшей или отсутствующей) считается недействительным —
-    как будто пользователь не входил."""
+    (непросроченной) записи в user_sessions считается недействительным — как будто
+    пользователь не входил."""
     session_token = request.cookies.get("access_token")
     if not session_token:
         return None
-    return db.query(User).filter(
-        User.session_token == session_token,
-        User.session_expires_at != None,
-        User.session_expires_at > utc_now()
+    session = db.query(UserSession).filter(
+        UserSession.token == session_token,
+        UserSession.expires_at > utc_now()
     ).first()
+    if not session:
+        return None
+    return db.query(User).filter(User.id == session.user_id).first()
 
 
 class RedirectException(Exception):

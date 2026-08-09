@@ -1,7 +1,7 @@
 import secrets
 from datetime import timedelta
 
-from models import Branch, User, Client, Order
+from models import Branch, User, Client, Order, UserSession
 from utils import utc_now
 
 
@@ -54,8 +54,8 @@ def make_order(db, branch, client_obj, manager=None, **overrides):
 def login_session(db, http_client, user, lifetime=timedelta(days=30)):
     """Выдаёт пользователю рабочую сессию в обход формы входа — быстрее для тестов,
     сама форма входа отдельно проверяется в test_auth.py."""
-    user.session_token = secrets.token_hex(16)
-    user.session_expires_at = utc_now() + lifetime
+    token = secrets.token_hex(16)
+    db.add(UserSession(user_id=user.id, token=token, expires_at=utc_now() + lifetime))
     db.commit()
-    http_client.cookies.set("access_token", user.session_token)
-    return user.session_token
+    http_client.cookies.set("access_token", token)
+    return token

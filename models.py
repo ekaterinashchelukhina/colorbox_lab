@@ -27,13 +27,22 @@ class User(Base):
     # Постоянный логин-токен сотрудника (аналог пароля, не меняется при входе)
     token = Column(String, unique=True, index=True, nullable=True)
 
-    # Сессионный токен с ограниченным сроком действия — выдаётся заново при каждом входе,
-    # именно он живёт в cookie. Позволяет ограничить срок жизни активной сессии, не трогая
-    # постоянный логин-токен пользователя.
-    session_token = Column(String, unique=True, index=True, nullable=True)
-    session_expires_at = Column(DateTime, nullable=True)
-
     branch = relationship("Branch", back_populates="users")
+
+
+class UserSession(Base):
+    """Одна активная сессия входа. Отдельная таблица, а не колонка на User — один
+    сотрудник может быть одновременно залогинен с телефона и с компьютера: раньше
+    (session_token/session_expires_at прямо на User) второй вход тут же обнулял первый,
+    и сессия "сама" вылетала на другом устройстве."""
+    __tablename__ = "user_sessions"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    token = Column(String, unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime, nullable=False)
+    created_at = Column(DateTime, default=utc_now)
+
+    user = relationship("User")
 
 
 class Client(Base):

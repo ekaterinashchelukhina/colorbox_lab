@@ -6,7 +6,7 @@ from sqlalchemy import and_, case, func, not_
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Order, User, Branch, Shift, Client
+from models import Order, User, Branch, Shift, Client, UserSession
 from utils import (
     templates, require_director, require_director_page, parse_photo_list, paginate_query,
     scope_query_to_branch, parse_optional_id, apply_date_range_filter, CANCELLED_STATUS,
@@ -217,6 +217,10 @@ def delete_user(request: Request, user_id: int, db: Session = Depends(get_db),
 
         # Удаляем смены сотрудника
         db.query(Shift).filter(Shift.user_id == user_id).delete()
+
+        # И его активные сессии — иначе останутся в user_sessions ссылкой на удалённого
+        # пользователя (FK без ON DELETE)
+        db.query(UserSession).filter(UserSession.user_id == user_id).delete()
 
         # Безопасно удаляем пользователя
         db.delete(target_user)

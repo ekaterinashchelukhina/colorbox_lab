@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 # Импорты базы данных и утилит
 from database import get_db, sync_schema
-from models import User, Order, Shift
+from models import User, Order, Shift, UserSession
 from utils import templates, RedirectException, require_login, utc_now, user_has_role, CANCELLED_STATUS
 from storage import UPLOAD_DIR
 
@@ -116,29 +116,34 @@ def login(request: Request, username: str = Form(...), token: str = Form(...), d
 
     # Постоянный логин-токен (token) — пароль сотрудника, не меняется.
     # В cookie кладём отдельный сессионный токен с ограниченным сроком действия,
-    # выдаваемый заново при каждом входе.
-    user.session_token = secrets.token_hex(32)
-    user.session_expires_at = utc_now() + SESSION_LIFETIME
+    # выдаваемый заново при каждом входе. Отдельная строка в user_sessions, а не
+    # перезапись одной колонки на User — иначе вход с телефона обнулял бы сессию
+    # на компьютере (и наоборот), заставляя логиниться заново каждый раз.
+    db.query(UserSession).filter(
+        UserSession.user_id == user.id, UserSession.expires_at <= utc_now()
+    ).delete()
+
+    session = UserSession(user_id=user.id, token=secrets.token_hex(32), expires_at=utc_now() + SESSION_LIFETIME)
+    db.add(session)
     db.commit()
 
     response = RedirectResponse(url=redirect_url, status_code=303)
     # secure зависит от схемы запроса: жёстко включать его нельзя, иначе логин
     # ломается при локальной разработке по http; за HTTPS-прокси (продакшн) req
     # приходит уже как https, и secure включается автоматически.
-    response.set_cookie(key="access_token", value=user.session_token, httponly=True,
+    response.set_cookie(key="access_token", value=session.token, httponly=True,
                         max_age=int(SESSION_LIFETIME.total_seconds()),
                         samesite="lax", secure=request.url.scheme == "https")
     return response
 
 @app.get("/logout")
 def logout(request: Request, db: Session = Depends(get_db)):
+    # Удаляет только сессию этого устройства/браузера — выход с телефона не должен
+    # разлогинивать компьютер и наоборот.
     session_token = request.cookies.get("access_token")
     if session_token:
-        user = db.query(User).filter(User.session_token == session_token).first()
-        if user:
-            user.session_token = None
-            user.session_expires_at = None
-            db.commit()
+        db.query(UserSession).filter(UserSession.token == session_token).delete()
+        db.commit()
 
     response = RedirectResponse(url="/", status_code=303)
     response.delete_cookie("access_token", samesite="lax", secure=request.url.scheme == "https")
