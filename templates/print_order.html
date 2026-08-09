@@ -23,7 +23,7 @@
             margin-top: 0;
             text-align: center;
         }
-        .info-table, .recipe-table {
+        .info-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
@@ -31,17 +31,6 @@
         .info-table td {
             padding: 8px;
             vertical-align: top;
-        }
-        .recipe-table th, .recipe-table td {
-            border: 1px solid #333;
-            padding: 8px 12px;
-            text-align: left;
-        }
-        .recipe-table th {
-            background: #f0f0f0;
-        }
-        .text-right {
-            text-align: right;
         }
         .no-print {
             text-align: center;
@@ -93,38 +82,14 @@
         </tr>
     </table>
 
-    <h3 style="margin-top: 30px; text-align: left;">Компоненты рецепта:</h3>
-
-    <table class="recipe-table">
-        <thead>
-            <tr>
-                <th>Категория</th>
-                <th>Тонер / Пигмент</th>
-                <th class="text-right">Масса (г)</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for item in order.recipe_items %}
-            <tr>
-                <td>{{ item.category }}</td>
-                <td><strong>{{ item.toner_name }}</strong></td>
-                <td class="text-right">{{ item.weight }} г</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="3" style="text-align: center; color: #666;">Компоненты не добавлены</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-        {% if order.recipe_items %}
-        <tfoot>
-            <tr>
-                <td colspan="2" class="text-right"><strong>Итого масса:</strong></td>
-                <td class="text-right"><strong>{{ order.recipe_items | map(attribute='weight') | sum | round(1) }} г</strong></td>
-            </tr>
-        </tfoot>
-        {% endif %}
-    </table>
+    {% if order.service_type != 'Готовая автоэмаль' %}
+    <h3 style="margin-top: 30px; text-align: left;">Фото рецепта:</h3>
+    {% if order.recipe_photo %}
+        <img src="{{ order.recipe_photo }}" alt="Рецепт" style="max-width: 100%; max-height: 400px; display: block; margin: 0 auto; border: 1px solid #333; border-radius: 4px;" />
+    {% else %}
+        <p style="text-align: center; color: #666;">Фото рецепта не загружено</p>
+    {% endif %}
+    {% endif %}
 
     <div style="margin-top: 40px; display: flex; justify-content: space-between;">
         <div>Колорист: _______________________</div>

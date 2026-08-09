@@ -134,6 +134,28 @@
             {% endif %}
         </div>
         {% endif %}
+
+        <!-- Фото рецепта -->
+        {% if order.service_type != 'Готовая автоэмаль' %}
+        <div class="card shadow-sm border-0 rounded-4 p-3">
+            <span class="fw-bold mb-2">
+                {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}3. {% endif %}Фото рецепта
+                {% if order.service_type == 'Слив по коду' %}<span class="text-muted small fw-normal">(опционально)</span>{% endif %}
+            </span>
+            {% if order.recipe_photo %}
+                <img src="{{ order.recipe_photo }}" class="photo-preview mb-2">
+                <span class="text-success small fw-bold">✅ Загружено</span>
+            {% else %}
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="photo_type" value="recipe">
+                    <label class="d-block upload-zone p-2 rounded-3 mb-2">
+                        <span class="d-block small text-dark fw-bold py-2">📸 Сделать фото рецепта</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" {% if order.service_type in ['Подбор', 'Экспресс-подбор'] %}required{% endif %} style="display: none;" onchange="this.form.submit()">
+                    </label>
+                </form>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
     {% endif %}
 

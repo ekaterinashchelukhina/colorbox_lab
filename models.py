@@ -68,6 +68,7 @@ class Order(Base):
     photo_detail = Column(String, nullable=True)
     photo_scales = Column(String, nullable=True)
     photo_after = Column(String, nullable=True)
+    recipe_photo = Column(String, nullable=True)  # Фото рецепта краски
 
     # Фотоконтроль доколеровки (заполняется заново при каждом возврате из архива)
     rework_photo_scales = Column(String, nullable=True)
@@ -78,24 +79,12 @@ class Order(Base):
     deadline_at = Column(DateTime)
     issued_at = Column(DateTime, nullable=True)  # Точное время сдачи заказа (переход в статус "Выдано")
 
-    recipe_items = relationship("RecipeItem", back_populates="order", cascade="all, delete-orphan")
     branch = relationship("Branch", back_populates="orders")
     client = relationship("Client", back_populates="orders")
 
     # <-- Добавлены явные связи, чтобы SQLAlchemy понимала, кто менеджер, а кто колорист
     manager = relationship("User", foreign_keys=[manager_id])
     colorist = relationship("User", foreign_keys=[colorist_id])
-
-
-class RecipeItem(Base):
-    __tablename__ = "recipe_items"
-    id = Column(Integer, primary_key=True, index=True)
-    order_id = Column(Integer, ForeignKey("orders.id"))
-    category = Column(String)
-    toner_name = Column(String)
-    weight = Column(Float)
-
-    order = relationship("Order", back_populates="recipe_items")
 
 
 class Shift(Base):

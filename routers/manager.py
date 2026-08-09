@@ -7,7 +7,7 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Order, Client, RecipeItem, User, Branch, Shift
+from models import Order, Client, User, Branch, Shift
 from utils import get_current_user, compress_and_save_image, templates, UPLOAD_DIR, require_login
 
 router = APIRouter()
@@ -217,6 +217,8 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
                 return HTMLResponse("<h2>Ошибка: Отсутствует фотоконтроль!</h2>")
             elif order.service_type not in ["Подбор", "Экспресс-подбор"] and not order.photo_scales:
                 return HTMLResponse("<h2>Ошибка: Отсутствует фотоконтроль!</h2>")
+            if order.service_type in ["Подбор", "Экспресс-подбор"] and not order.recipe_photo:
+                return HTMLResponse("<h2>Ошибка: Отсутствует фото рецепта!</h2>")
 
         if new_status == "Готово":
             order.status = "Ожидает выдачи"
@@ -266,26 +268,9 @@ def upload_photo(request: Request, order_id: int, photo_type: str = Form(...), f
             order.rework_photo_after = f"/{file_path}"
         elif photo_type == "rework_test":
             order.rework_photo_test = f"/{file_path}"
+        elif photo_type == "recipe":
+            order.recipe_photo = f"/{file_path}"
         db.commit()
-    return RedirectResponse(url=f"/order/{order_id}", status_code=303)
-
-
-@router.post("/order/{order_id}/recipe")
-def add_recipe_item(request: Request, order_id: int, category: str = Form(...), toner_name: str = Form(...),
-                    weight: float = Form(...), db: Session = Depends(get_db)):
-    if get_current_user(request, db) and db.query(Order).filter(Order.id == order_id).first():
-        db.add(RecipeItem(order_id=order_id, category=category, toner_name=toner_name, weight=weight))
-        db.commit()
-    return RedirectResponse(url=f"/order/{order_id}", status_code=303)
-
-
-@router.post("/order/{order_id}/recipe/{item_id}/delete")
-def delete_recipe_item(request: Request, order_id: int, item_id: int, db: Session = Depends(get_db)):
-    if get_current_user(request, db):
-        item = db.query(RecipeItem).filter(RecipeItem.id == item_id, RecipeItem.order_id == order_id).first()
-        if item:
-            db.delete(item)
-            db.commit()
     return RedirectResponse(url=f"/order/{order_id}", status_code=303)
 
 
