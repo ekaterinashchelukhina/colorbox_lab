@@ -188,6 +188,26 @@ uvicorn main:app --reload
    `YOUR_DOMAIN` и пути, `ln -s` в `sites-enabled`, `nginx -t && systemctl reload nginx`.
    Затем `certbot --nginx -d YOUR_DOMAIN` — сам допишет HTTPS и автопродление.
 
+### Обновление на сервере
+
+Каждый следующий деплой — это **`git pull` + `systemctl restart colorbox`**, а не только
+`git pull`:
+
+```bash
+cd /opt/colorbox
+sudo -u colorbox git pull
+sudo -u colorbox .venv/bin/pip install -r requirements.txt   # если requirements.txt менялся
+alembic upgrade head                                          # если появились новые миграции
+sudo systemctl restart colorbox
+```
+
+Шаблоны (`templates/*.html`) Jinja2 читает с диска заново на каждый запрос — им рестарт не
+нужен. А Python-код (`main.py`, `routers/*.py`, `utils.py` и т.д.) gunicorn/uvicorn загружает
+один раз при старте и держит в памяти процесса — `git pull` без рестарта его не подхватит.
+Если после деплоя рестарт забыть, получится ровно та ситуация, что уже случалась: старый код
+в памяти работает с уже обновившимися шаблонами и падает на рассинхроне (например,
+`jinja2.exceptions.UndefinedError` — шаблон ждёт переменную, которую старый код ещё не передаёт).
+
 ## Конфигурация
 
 | Переменная | Назначение | Значение по умолчанию |
