@@ -37,7 +37,8 @@
         <a href="/clients" class="bg-[#ecf0f1] hover:bg-[#dfe4e6] text-[#2c3e50] px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">Сбросить</a>
     </form>
 
-    <div class="bg-white rounded-xl overflow-hidden shadow-sm border border-[#ecf0f1]">
+    <!-- ДЕСКТОПНАЯ ВЕРСИЯ: ТАБЛИЦА (скрыта на телефонах) -->
+    <div class="hidden md:block bg-white rounded-xl overflow-hidden shadow-sm border border-[#ecf0f1]">
         <table class="w-full text-left text-sm border-collapse">
             <thead class="bg-[#2c3e50] text-white">
                 <tr>
@@ -70,6 +71,29 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+
+    <!-- МОБИЛЬНАЯ ВЕРСИЯ: КАРТОЧКИ (скрыты на ПК) -->
+    <div class="flex flex-col gap-3 md:hidden">
+        {% for client in clients %}
+        <div class="bg-white p-4 rounded-xl border border-[#ecf0f1] shadow-sm">
+            <div class="flex justify-between items-start gap-3 mb-3">
+                <div class="font-bold text-lg text-[#2c3e50]">{{ client.name }}</div>
+                <span class="bg-gray-100 text-[#7f8c8d] px-2 py-1 rounded text-xs font-bold whitespace-nowrap">{{ client.orders|length }} зак.</span>
+            </div>
+            {% if role == "Директор" %}
+            <div class="text-sm text-gray-700 mb-3">
+                <span class="font-bold text-[#7f8c8d]">Филиал:</span>
+                <span class="font-medium">{{ client.branch.name if client.branch else "—" }}</span>
+            </div>
+            {% endif %}
+            <a href="/client/{{ client.id }}" class="block text-center bg-[#3498db] hover:bg-[#2980b9] text-white px-4 py-2.5 rounded-lg font-bold text-sm transition-colors">Открыть</a>
+        </div>
+        {% else %}
+        <div class="bg-white p-10 rounded-xl border border-[#ecf0f1] shadow-sm text-center text-[#7f8c8d] text-[15px]">
+            Клиенты не найдены.
+        </div>
+        {% endfor %}
     </div>
 
     {% if total_pages > 1 %}
