@@ -19,6 +19,35 @@
         </div>
     </div>
 
+    <!-- Смена менеджера (упрощённая, без фото и отчёта) -->
+    {% if active_shift %}
+    <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div class="flex items-center gap-2">
+            <span class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
+            <span class="text-green-800 font-bold text-base">Смена активна</span>
+        </div>
+        <form action="/manager/shift/end" method="post" id="manager-end-shift-form">
+            <input type="hidden" name="client_time" id="client_time_input_manager_end">
+            <button type="submit" class="bg-white border border-red-200 text-[#e74c3c] hover:bg-red-50 px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
+                Завершить смену
+            </button>
+        </form>
+    </div>
+    {% else %}
+    <div class="bg-gray-50 border-l-4 border-gray-300 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div class="flex items-center gap-2">
+            <span class="w-3 h-3 bg-gray-400 rounded-full"></span>
+            <span class="text-[#7f8c8d] font-bold text-base">Смена не начата</span>
+        </div>
+        <form action="/manager/shift/start" method="post" id="manager-start-shift-form">
+            <input type="hidden" name="client_time" id="client_time_input_manager_start">
+            <button type="submit" class="bg-[#3498db] hover:bg-[#2980b9] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
+                Начать смену
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
     <!-- ДЕСКТОПНАЯ ВЕРСИЯ: ТАБЛИЦА (Скрыта на телефонах) -->
     <div class="hidden md:block bg-white rounded-xl shadow-sm border border-[#ecf0f1] overflow-hidden">
         <table class="w-full text-left text-sm border-collapse">
@@ -111,4 +140,20 @@
     </div>
 
 </div>
+
+<script>
+    // Фиксируем локальное время устройства прямо перед отправкой форм смены менеджера
+    function bindClientTime(formId, inputId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+        form.addEventListener('submit', function() {
+            const now = new Date();
+            const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+            const localIso = new Date(now.getTime() - offsetMs).toISOString().slice(0, 19);
+            document.getElementById(inputId).value = localIso;
+        });
+    }
+    bindClientTime('manager-start-shift-form', 'client_time_input_manager_start');
+    bindClientTime('manager-end-shift-form', 'client_time_input_manager_end');
+</script>
 {% endblock %}

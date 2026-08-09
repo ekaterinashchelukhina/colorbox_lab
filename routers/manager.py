@@ -7,12 +7,44 @@ from fastapi.responses import RedirectResponse, HTMLResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import Order, Client, RecipeItem, User, Branch
+from models import Order, Client, RecipeItem, User, Branch, Shift
 from utils import get_current_user, compress_and_save_image, templates, UPLOAD_DIR, require_login
 
 router = APIRouter()
 
 SERVICE_TYPES = ["Подбор", "Слив по коду", "Экспресс-подбор", "Готовая автоэмаль"]
+
+
+@router.post("/manager/shift/start")
+def manager_start_shift(request: Request, client_time: str = Form(None),
+                        db: Session = Depends(get_db), user: User = Depends(require_login)):
+    """Упрощённый старт смены для менеджера: без фото и без отчёта."""
+    if not user.role or user.role.lower() != "менеджер":
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    active_shift = db.query(Shift).filter(Shift.user_id == user.id, Shift.end_time == None).first()
+    if not active_shift:
+        start_dt = datetime.fromisoformat(client_time) if client_time else datetime.now(timezone.utc)
+        db.add(Shift(user_id=user.id, branch_id=user.branch_id, start_time=start_dt))
+        db.commit()
+
+    return RedirectResponse(url="/dashboard", status_code=303)
+
+
+@router.post("/manager/shift/end")
+def manager_end_shift(request: Request, client_time: str = Form(None),
+                      db: Session = Depends(get_db), user: User = Depends(require_login)):
+    """Упрощённое завершение смены для менеджера: без фото и без отчёта."""
+    if not user.role or user.role.lower() != "менеджер":
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    active_shift = db.query(Shift).filter(Shift.user_id == user.id, Shift.end_time == None).first()
+    if active_shift:
+        end_dt = datetime.fromisoformat(client_time) if client_time else datetime.now(timezone.utc)
+        active_shift.end_time = end_dt
+        db.commit()
+
+    return RedirectResponse(url="/dashboard", status_code=303)
 
 
 def _filtered_archive_query(db: Session, user: User, user_role: str, branch_id: Optional[str],

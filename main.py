@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 # Импорты базы данных и утилит
 from database import get_db, sync_schema
-from models import User, Order
+from models import User, Order, Shift
 from utils import templates, RedirectException, require_login
 
 # Импорт наших новых роутеров
@@ -83,8 +83,11 @@ def dashboard(request: Request, db: Session = Depends(get_db), user: User = Depe
         Order.branch_id == user.branch_id, Order.status != "Выдано"
     ).order_by(Order.created_at.desc()).all()
 
+    active_shift = db.query(Shift).filter(Shift.user_id == user.id, Shift.end_time == None).first()
+
     return templates.TemplateResponse(request=request, name="dashboard.html", context={
         "username": user.username,
-        "orders": orders
+        "orders": orders,
+        "active_shift": active_shift
     })
 

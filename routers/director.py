@@ -140,7 +140,10 @@ def print_shifts_report(request: Request, branch_id: Optional[str] = None, color
     b_id = int(branch_id) if branch_id and branch_id.isdigit() else None
     c_id = int(colorist_id) if colorist_id and colorist_id.isdigit() else None
 
-    shifts_query = db.query(Shift).filter(Shift.end_time != None).order_by(Shift.start_time.desc())
+    # Отчёт только по колористам — смены менеджеров сюда не попадают
+    shifts_query = db.query(Shift).join(User).filter(
+        Shift.end_time != None, User.role == "Колорист"
+    ).order_by(Shift.start_time.desc())
     shifts_query = _apply_shift_filters(shifts_query, b_id, c_id, date_from, date_to)
     shifts = shifts_query.all()
     for shift in shifts:
@@ -212,7 +215,10 @@ def director_shifts_list(request: Request, branch_id: Optional[str] = None, colo
         return RedirectResponse(url="/dashboard", status_code=303)
 
     branches = db.query(Branch).all()
-    query = db.query(Shift).filter(Shift.end_time != None).order_by(Shift.start_time.desc())
+    # Отчёт только по колористам — смены менеджеров сюда не попадают
+    query = db.query(Shift).join(User).filter(
+        Shift.end_time != None, User.role == "Колорист"
+    ).order_by(Shift.start_time.desc())
 
     current_branch = None
     b_id = int(branch_id) if branch_id and branch_id.isdigit() else None
