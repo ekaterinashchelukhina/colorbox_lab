@@ -356,3 +356,60 @@ def test_manager_cannot_release_order(client, db_session):
     db_session.refresh(order)
     assert order.status == "В работе"
     assert order.colorist_id == colorist.id
+
+
+def test_manager_cannot_issue_order_without_saved_price(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="Ожидает выдачи", price=0.0)
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/status", data={"new_status": "Выдано"})
+
+    assert "сохраните расчёт" in resp.text
+    db_session.refresh(order)
+    assert order.status == "Ожидает выдачи"
+
+
+def test_manager_cannot_issue_order_before_colorist_finishes(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди", price=4000.0)
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/status", data={"new_status": "Выдано"})
+
+    assert "не завершён" in resp.text
+    db_session.refresh(order)
+    assert order.status == "В очереди"
+
+
+def test_manager_can_issue_order_when_ready_and_priced(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="Ожидает выдачи", price=4000.0)
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/status", data={"new_status": "Выдано"}, follow_redirects=False)
+
+    assert resp.status_code == 303
+    db_session.refresh(order)
+    assert order.status == "Выдано"
+    assert order.issued_at is not None
+
+
+def test_manager_cannot_manually_set_other_statuses(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="Ожидает выдачи", price=4000.0)
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/status", data={"new_status": "В очереди"})
+
+    assert "только в статус" in resp.text
+    db_session.refresh(order)
+    assert order.status == "Ожидает выдачи"
