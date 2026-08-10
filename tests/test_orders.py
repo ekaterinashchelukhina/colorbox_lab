@@ -413,3 +413,139 @@ def test_manager_cannot_manually_set_other_statuses(client, db_session):
     assert "только в статус" in error_text(resp)
     db_session.refresh(order)
     assert order.status == "Ожидает выдачи"
+
+
+def test_colorist_cannot_revert_issued_order_to_v_rabote(client, db_session):
+    """Раньше тот же колорист, что вёл заказ, мог прямым POST вернуть уже выданный
+    заказ в "В работе" — старые фото уже на месте, missing-photo проверка это
+    пропускала. Возврат в работу должен идти только через /order/{id}/rework."""
+    branch = make_branch(db_session)
+    colorist = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="Выдано", colorist_id=colorist.id,
+                       service_type="Слив по коду", photo_scales="/x.jpg")
+    login_session(db_session, client, colorist)
+
+    resp = client.post(f"/order/{order.id}/status", data={"new_status": "В работе"})
+
+    assert "выдан или отменён" in error_text(resp)
+    db_session.refresh(order)
+    assert order.status == "Выдано"
+
+
+def test_manager_cannot_upload_photo_after_issued(client, db_session):
+    import io
+
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, manager=manager, status="Выдано",
+                       photo_scales="/old.jpg")
+    login_session(db_session, client, manager)
+
+    resp = client.post(
+        f"/order/{order.id}/upload",
+        data={"photo_type": "scales"},
+        files={"file": ("new.jpg", io.BytesIO(b"replacement"), "image/jpeg")},
+    )
+
+    assert "выдан или отменён" in error_text(resp)
+    db_session.refresh(order)
+    assert order.photo_scales == "/old.jpg"
+
+
+def test_colorist_cannot_upload_photo_to_someone_elses_order(client, db_session):
+    import io
+
+    branch = make_branch(db_session)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В работе", colorist_id=colorist_a.id)
+    login_session(db_session, client, colorist_b)
+
+    resp = client.post(
+        f"/order/{order.id}/upload",
+        data={"photo_type": "scales"},
+        files={"file": ("photo.jpg", io.BytesIO(b"data"), "image/jpeg")},
+    )
+
+    assert "закреплён за другим колористом" in error_text(resp)
+    db_session.refresh(order)
+    assert order.photo_scales is None
+
+
+def test_manager_cannot_edit_finance_after_issued(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, manager=manager, status="Выдано", price=4000.0)
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/finance", data={"price": "1", "is_paid": "on"})
+
+    assert "выдан или отменён" in error_text(resp)
+    db_session.refresh(order)
+    assert order.price == 4000.0
+
+
+def test_colorist_cannot_comment_on_someone_elses_order(client, db_session):
+    branch = make_branch(db_session)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В работе", colorist_id=colorist_a.id)
+    login_session(db_session, client, colorist_b)
+
+    resp = client.post(f"/order/{order.id}/comment",
+                       data={"comment_type": "colorist", "comment_text": "чужая заметка"})
+
+    assert "закреплён за другим колористом" in error_text(resp)
+    db_session.refresh(order)
+    assert order.colorist_comment is None
+
+
+def test_manager_cannot_comment_after_issued(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, manager=manager, status="Выдано")
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/comment",
+                       data={"comment_type": "manager", "comment_text": "поздний комментарий"})
+
+    assert "выдан или отменён" in error_text(resp)
+    db_session.refresh(order)
+    assert order.manager_comment is None
+
+
+def test_manager_cannot_reassign_colorist_after_issued(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="Выдано", colorist_id=colorist_a.id)
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+
+    assert "выдан или отменён" in error_text(resp)
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_a.id
+
+
+def test_manager_cannot_reassign_colorist_on_cancelled_order(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="Отменен")
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+
+    assert "выдан или отменён" in error_text(resp)
+    db_session.refresh(order)
+    assert order.colorist_id is None

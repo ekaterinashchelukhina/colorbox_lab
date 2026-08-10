@@ -3,6 +3,7 @@
 {% block title %}Заказ #{{ order.id }} - Colorist CRM{% endblock %}
 
 {% block content %}
+{% set is_locked = order.status in ["Выдано", "Отменен"] %}
 <div class="card order-page-container">
     <!-- Шапка -->
     <div class="card-header order-header-toolbar">
@@ -23,7 +24,7 @@
         <form action="/order/{{ order.id }}/rework" method="post" onsubmit="return confirm('Отправить заказ на доколеровку? Заказ вернётся в очередь колориста.');">
             <button type="submit" class="btn-action btn-action-purple">🎨 Доколеровка</button>
         </form>
-        {% else %}
+        {% elif order.status != "Отменен" %}
         <form action="/order/{{ order.id }}/cancel" method="post" onsubmit="return confirm('Отменить заказ? Он будет перенесён в архив со статусом «Отменен» — работу по нему продолжить будет нельзя.');">
             <button type="submit" class="btn-action btn-action-red">🗑 Отменить заказ</button>
         </form>
@@ -81,6 +82,14 @@
             <!-- Блок Финансы -->
             <div class="finance-panel">
                 <h3 class="finance-heading">Финансы и Оплата</h3>
+                {% if is_locked %}
+                <div style="margin-top: 15px;">
+                    <span style="font-size: 20px; font-weight: bold; color: #16a085;">{{ order.price }} ₽</span>
+                    <p class="field-row" style="margin-top: 8px;">
+                        {% if order.is_paid %}✅ Заказ оплачен{% else %}❌ Заказ не оплачен{% endif %}
+                    </p>
+                </div>
+                {% else %}
                 <form action="/order/{{ order.id }}/finance" method="post" style="display: flex; flex-direction: column; gap: 15px; margin-top: 15px;">
                     <div>
                         <label style="font-size: 12px; font-weight: bold; display: block; margin-bottom: 5px; color: #2c3e50;">Итоговая стоимость (₽):</label>
@@ -94,6 +103,7 @@
 
                     <button type="submit" class="btn-action btn-action-teal btn-action-block">Сохранить расчет</button>
                 </form>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -113,12 +123,19 @@
 
             <!-- Менеджер пишет/редактирует свой комментарий -->
             <div class="comment-column">
+                {% if is_locked %}
+                <label class="field-label-muted">Ваш комментарий:</label>
+                <div class="comment-readonly-box">
+                    {{ order.manager_comment if order.manager_comment else "Комментарий не оставлен." }}
+                </div>
+                {% else %}
                 <form action="/order/{{ order.id }}/comment" method="post" style="display: flex; flex-direction: column; height: 100%;">
                     <input type="hidden" name="comment_type" value="manager">
                     <label style="font-size: 13px; font-weight: bold; color: #2c3e50; display: block; margin-bottom: 5px;">Ваш комментарий (для колориста):</label>
                     <textarea name="comment_text" rows="3" placeholder="Например: Клиент просил сделать чуть темнее образца..." style="padding: 8px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; font-size: 14px; margin-bottom: 10px; resize: vertical;">{{ order.manager_comment or '' }}</textarea>
                     <button type="submit" class="btn-action btn-action-navy" style="align-self: flex-start;">Сохранить комментарий</button>
                 </form>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -139,6 +156,7 @@
                 {% else %}
                     <div style="height: 180px; background: #ecf0f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #95a5a6; margin-bottom: 10px; border: 2px dashed #bdc3c7; font-size: 13px;">Фото не загружено</div>
                 {% endif %}
+                {% if not is_locked %}
                 <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="detail" />
                     <label class="upload-zone">
@@ -146,6 +164,7 @@
                         <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
                     </label>
                 </form>
+                {% endif %}
             </div>
             {% endif %}
 
@@ -159,6 +178,7 @@
                 {% else %}
                     <div style="height: 180px; background: #fff3e0; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #e67e22; margin-bottom: 10px; border: 2px dashed #ffb74d; font-size: 13px;">Ждем колориста</div>
                 {% endif %}
+                {% if not is_locked %}
                 <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="scales" />
                     <label class="upload-zone">
@@ -166,6 +186,7 @@
                         <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
                     </label>
                 </form>
+                {% endif %}
             </div>
 
             {% if requires_full_photo_set %}
@@ -177,6 +198,7 @@
                 {% else %}
                     <div style="height: 180px; background: #e0f2f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #1abc9c; margin-bottom: 10px; border: 2px dashed #80cbc4; font-size: 13px;">Ждем колориста</div>
                 {% endif %}
+                {% if not is_locked %}
                 <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="after" />
                     <label class="upload-zone">
@@ -184,6 +206,7 @@
                         <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
                     </label>
                 </form>
+                {% endif %}
             </div>
             {% endif %}
 
@@ -196,6 +219,7 @@
                 {% else %}
                     <div style="height: 180px; background: #eaf2fb; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #5d8fc2; margin-bottom: 10px; border: 2px dashed #aecbe8; font-size: 13px;">Ждем колориста</div>
                 {% endif %}
+                {% if not is_locked %}
                 <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="recipe" />
                     <label class="upload-zone">
@@ -203,6 +227,7 @@
                         <input type="file" name="file" accept="image/*" capture="environment" {% if requires_full_photo_set %}required{% endif %} onchange="this.form.submit()" />
                     </label>
                 </form>
+                {% endif %}
             </div>
             {% endif %}
 
@@ -222,6 +247,7 @@
                 {% else %}
                     <div class="photo-placeholder-rework">Ждём колориста</div>
                 {% endif %}
+                {% if not is_locked %}
                 <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="rework_scales" />
                     <label class="upload-zone">
@@ -229,6 +255,7 @@
                         <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
                     </label>
                 </form>
+                {% endif %}
             </div>
 
             <div class="photo-panel-rework">
@@ -238,6 +265,7 @@
                 {% else %}
                     <div class="photo-placeholder-rework">Ждём колориста</div>
                 {% endif %}
+                {% if not is_locked %}
                 <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="rework_after" />
                     <label class="upload-zone">
@@ -245,6 +273,7 @@
                         <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
                     </label>
                 </form>
+                {% endif %}
             </div>
 
             <div class="photo-panel-rework">
@@ -254,6 +283,7 @@
                 {% else %}
                     <div class="photo-placeholder-rework">Ждём колориста</div>
                 {% endif %}
+                {% if not is_locked %}
                 <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="rework_test" />
                     <label class="upload-zone">
@@ -261,6 +291,7 @@
                         <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
                     </label>
                 </form>
+                {% endif %}
             </div>
         </div>
     </div>

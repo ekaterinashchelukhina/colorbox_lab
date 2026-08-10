@@ -32,6 +32,12 @@ ORDER_STATUSES = ["В очереди", "В работе", "Готово", "Ож�
 # отправить их прямым запросом в обход интерфейса.
 COLORIST_ONLY_STATUSES = ["В работе", "Готово"]
 
+# Заказ в одном из этих статусов — фактически архив: закрыт для любых правок (фото,
+# финансы, комментарии, переназначение колориста, смена статуса колористом), кроме
+# единственного сценария выхода — /order/{id}/rework, который сам требует "Выдано"
+# и явно, осознанно открывает заказ заново.
+LOCKED_STATUSES = ["Выдано", CANCELLED_STATUS]
+
 # Соответствие photo_type из формы загрузки полю заказа, куда сохранить путь к файлу.
 PHOTO_TYPE_FIELDS = {
     "detail": "photo_detail", "scales": "photo_scales", "after": "photo_after",
@@ -304,6 +310,14 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
                 return error_redirect(f"/order/{order_id}", "Сначала сохраните расчёт в блоке «Финансы и Оплата».")
 
         if user_has_role(user, "колорист"):
+            # Без этой проверки тот же колорист, что вёл заказ, мог вернуть уже
+            # выданный заказ обратно в "В работе" прямым POST — старые фото уже
+            # на месте, значит _missing_completion_photo() ничего бы не поймал.
+            # Единственный сценарий возврата выданного заказа в работу —
+            # /order/{id}/rework (действие менеджера, с явным сбросом фото и
+            # инкрементом счётчика доколеровок), не эта форма.
+            if order.status in LOCKED_STATUSES:
+                return error_redirect(f"/order/{order_id}", "Заказ уже выдан или отменён — статус изменить нельзя.")
             # Заказ уже закреплён за другим колористом (взят в работу или вернулся из
             # доколеровки — colorist_id при отправке на доколеровку не сбрасывается) —
             # чужой колорист не должен иметь возможность перехватить его себе через эту
@@ -345,6 +359,8 @@ def reassign_colorist(request: Request, order_id: int, colorist_id: int = Form(.
     order = get_in_branch_or_none(db, Order, order_id, user)
     if not order:
         return RedirectResponse(url="/dashboard", status_code=303)
+    if order.status in LOCKED_STATUSES:
+        return error_redirect(f"/order/{order_id}", "Заказ уже выдан или отменён — колориста изменить нельзя.")
 
     # Новый колорист обязан быть колористом того же филиала, что и заказ — иначе
     # можно было бы передать заказ сотруднику, который его физически не увидит
@@ -439,7 +455,19 @@ def upload_photo(request: Request, order_id: int, photo_type: str = Form(...), f
         return error_redirect(f"/order/{order_id}", "Недопустимый тип фото.")
 
     order = get_in_branch_or_none(db, Order, order_id, user)
-    if order and file and file.filename:
+    if not order:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    # Выданный/отменённый заказ — архив: фото-доказательства менять нельзя даже
+    # менеджеру (раньше можно было зайти на карточку из архива и подменить фото).
+    if order.status in LOCKED_STATUSES:
+        return error_redirect(f"/order/{order_id}", "Заказ уже выдан или отменён — фото изменить нельзя.")
+    # Свой колорист может дозагрузить/поправить фото своего заказа; чужой — не должен
+    # иметь возможность вмешаться в заказ, который ведёт не он (та же логика, что
+    # в update_order_status).
+    if user_has_role(user, "колорист") and order.colorist_id is not None and order.colorist_id != user.id:
+        return error_redirect(f"/order/{order_id}", "Этот заказ закреплён за другим колористом.")
+
+    if file and file.filename:
         try:
             photo_url = save_order_photo(file, f"order_{order_id}_{photo_type}.jpg")
         except InvalidImageError as e:
@@ -458,6 +486,8 @@ def update_order_finance(request: Request, order_id: int, price: str = Form("0")
 
     order = get_in_branch_or_none(db, Order, order_id, user)
     if order:
+        if order.status in LOCKED_STATUSES:
+            return error_redirect(f"/order/{order_id}", "Заказ уже выдан или отменён — расчёт изменить нельзя.")
         try:
             clean_price = float(price.replace(",", "."))
         except ValueError:
@@ -473,10 +503,16 @@ def update_order_comment(request: Request, order_id: int, comment_type: str = Fo
                          db: Session = Depends(get_db), user: User = Depends(require_login)):
     order = get_in_branch_or_none(db, Order, order_id, user)
     if order:
+        if order.status in LOCKED_STATUSES:
+            return error_redirect(f"/order/{order_id}", "Заказ уже выдан или отменён — комментарий изменить нельзя.")
         # Каждая роль пишет только в свой комментарий, а не в чужой
         if comment_type == "manager" and (user_has_role(user, "менеджер") or user_has_role(user, "директор")):
             order.manager_comment = comment_text
         elif comment_type == "colorist" and user_has_role(user, "колорист"):
+            # Чужой колорист не должен иметь возможность переписать заметку колориста,
+            # который реально ведёт этот заказ — та же логика владения, что и везде.
+            if order.colorist_id is not None and order.colorist_id != user.id:
+                return error_redirect(f"/order/{order_id}", "Этот заказ закреплён за другим колористом.")
             order.colorist_comment = comment_text
         else:
             return error_redirect(f"/order/{order_id}", "Недостаточно прав для этого комментария.")
