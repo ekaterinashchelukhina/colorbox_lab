@@ -18,7 +18,7 @@
     <form method="get" action="/client/{{ client.id }}" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
         <div>
             <label class="filter-label">Тип услуги</label>
-            <select name="service_type" style="padding: 8px; border-radius: 5px; border: 1px solid #bdc3c7; background: white;">
+            <select name="service_type" style="padding: 7px 10px; border-radius: 6px; border: 1px solid #bdc3c7; background: white; font-size: 13px;">
                 <option value="">Все типы</option>
                 {% for st in service_types %}
                 <option value="{{ st }}" {% if filters.service_type == st %}selected{% endif %}>{{ st }}</option>
@@ -33,8 +33,8 @@
             <label class="filter-label">По дату</label>
             <input type="date" name="date_to" value="{{ filters.date_to }}" class="date-input">
         </div>
-        <button type="submit" style="background: #3498db; color: white; border: none; padding: 9px 18px; border-radius: 5px; cursor: pointer; font-weight: bold;">Применить</button>
-        <a href="/client/{{ client.id }}" style="background: #ecf0f1; color: #2c3e50; padding: 9px 18px; border-radius: 5px; text-decoration: none; font-weight: bold;">Сбросить</a>
+        <button type="submit" class="btn-action btn-action-blue">Применить</button>
+        <a href="/client/{{ client.id }}" class="btn-action btn-action-muted">Сбросить</a>
     </form>
 
     <!-- ДЕСКТОПНАЯ ВЕРСИЯ: ТАБЛИЦА (тот же паттерн, что на dashboard/archive/director_*) -->
