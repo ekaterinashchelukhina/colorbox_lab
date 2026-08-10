@@ -112,14 +112,7 @@
     <!-- Блок фотографий (Динамический) -->
     {% set requires_full_photo_set = order.service_type in ['Подбор', 'Экспресс-подбор'] %}
     <div class="photo-section">
-        <h3 class="page-section-heading">
-            Фотоконтроль
-            {% if requires_full_photo_set %}
-                (3 этапа)
-            {% else %}
-                (Только весы)
-            {% endif %}
-        </h3>
+        <h3 class="page-section-heading">Фотоконтроль</h3>
 
         <div class="photo-panels-row">
 
