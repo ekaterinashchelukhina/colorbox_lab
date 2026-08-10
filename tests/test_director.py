@@ -58,6 +58,19 @@ def test_can_delete_empty_branch(client, db_session):
     assert db_session.query(Branch).filter(Branch.id == branch.id).first() is None
 
 
+def test_add_user_rejects_invalid_role(client, db_session):
+    branch = make_branch(db_session)
+    director = make_user(db_session, role="Директор", branch=None)
+    login_session(db_session, client, director)
+
+    resp = client.post("/director/user/add", data={
+        "username_new": "hacker", "role": "SuperAdmin", "branch_id": branch.id,
+    })
+
+    assert "Ошибка" in resp.text
+    assert db_session.query(User).filter(User.username == "hacker").first() is None
+
+
 def test_new_user_login_survives_stray_whitespace_in_username(client, db_session):
     branch = make_branch(db_session)
     director = make_user(db_session, role="Директор", branch=None)

@@ -14,6 +14,11 @@ from utils import (
 
 router = APIRouter(prefix="/director")
 
+# Ровно варианты <option> из формы добавления сотрудника (director_users.html) —
+# без этого поле role принимает любую строку из тела запроса, и опечатка/чужое
+# значение создаёт учётку, которая не подходит ни под одну роль в user_has_role().
+ALLOWED_USER_ROLES = ["Менеджер", "Колорист", "Директор"]
+
 
 def _apply_shift_filters(query, user, branch_id, colorist_id, date_from, date_to):
     query = scope_query_to_branch(query, Shift, user, branch_id)
@@ -187,6 +192,8 @@ def add_user(request: Request, username_new: str = Form(...), role: str = Form(.
     clean_username = username_new.strip()
     if db.query(User).filter(User.username == clean_username).first():
         return HTMLResponse("Ошибка: Пользователь с таким логином уже существует.")
+    if role not in ALLOWED_USER_ROLES:
+        return HTMLResponse("Ошибка: Недопустимая роль.")
 
     employee_token = secrets.token_hex(16)
     db.add(User(username=clean_username, password_hash=None, role=role, branch_id=branch_id, token=employee_token))

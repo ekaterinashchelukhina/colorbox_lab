@@ -163,3 +163,37 @@ def test_colorist_cannot_send_order_to_rework(client, db_session):
     db_session.refresh(order)
     assert order.status == "Выдано"
     assert order.rework_count == 0
+
+
+def test_director_cannot_change_order_status(client, db_session):
+    branch = make_branch(db_session)
+    director = make_user(db_session, role="Директор", branch=None)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди")
+    login_session(db_session, client, director)
+
+    client.post(f"/order/{order.id}/status", data={"new_status": "Выдано"})
+
+    db_session.refresh(order)
+    assert order.status == "В очереди"
+
+
+def test_director_cannot_upload_order_photo(client, db_session):
+    import io
+
+    branch = make_branch(db_session)
+    director = make_user(db_session, role="Директор", branch=None)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди")
+    login_session(db_session, client, director)
+
+    resp = client.post(
+        f"/order/{order.id}/upload",
+        data={"photo_type": "scales"},
+        files={"file": ("photo.jpg", io.BytesIO(b"not checked, blocked before validation"), "image/jpeg")},
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 303
+    db_session.refresh(order)
+    assert order.photo_scales is None

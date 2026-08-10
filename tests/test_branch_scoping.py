@@ -137,3 +137,34 @@ def test_manager_cannot_create_client_for_another_branch(client, db_session):
 
     assert "Ошибка" in resp.text
     assert db_session.query(ClientModel).filter(ClientModel.name == "Чужой клиент").first() is None
+
+
+def test_colorist_cannot_view_archive(client, db_session):
+    branch = make_branch(db_session)
+    colorist = make_user(db_session, role="Колорист", branch=branch)
+    login_session(db_session, client, colorist)
+
+    resp = client.get("/archive", follow_redirects=False)
+
+    assert resp.status_code == 303
+
+
+def test_colorist_cannot_view_clients_list(client, db_session):
+    branch = make_branch(db_session)
+    colorist = make_user(db_session, role="Колорист", branch=branch)
+    login_session(db_session, client, colorist)
+
+    resp = client.get("/clients", follow_redirects=False)
+
+    assert resp.status_code == 303
+
+
+def test_colorist_cannot_view_client_detail(client, db_session):
+    branch = make_branch(db_session)
+    colorist = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    login_session(db_session, client, colorist)
+
+    resp = client.get(f"/client/{client_obj.id}", follow_redirects=False)
+
+    assert resp.status_code == 303

@@ -72,6 +72,15 @@ def manager_end_shift(request: Request,
     return RedirectResponse(url="/dashboard", status_code=303)
 
 
+def _require_manager_or_director(user: User) -> Optional[RedirectResponse]:
+    """Архив и клиентская база — не рабочая зона колориста: в его интерфейсе нет ссылок
+    ни туда, ни сюда, а архив к тому же показывает цену и статус оплаты заказа —
+    в /order/{id}/finance это явно описано как зона менеджера/директора, не колориста."""
+    if not (user_has_role(user, "менеджер") or user_has_role(user, "директор")):
+        return RedirectResponse(url="/dashboard", status_code=303)
+    return None
+
+
 def _filtered_archive_query(db: Session, user: User, branch_id: Optional[str],
                             colorist_id: Optional[str], date_from: Optional[str], date_to: Optional[str],
                             service_type: Optional[str] = None):
@@ -95,6 +104,10 @@ def view_archive(request: Request, branch_id: Optional[str] = None, colorist_id:
                  date_from: Optional[str] = None, date_to: Optional[str] = None,
                  service_type: Optional[str] = None, page: int = 1,
                  db: Session = Depends(get_db), user: User = Depends(require_login)):
+    guard = _require_manager_or_director(user)
+    if guard:
+        return guard
+
     user_role = display_role(user)
     archive_query = _filtered_archive_query(db, user, branch_id, colorist_id, date_from, date_to,
                                             service_type)
@@ -121,6 +134,10 @@ def print_archive(request: Request, branch_id: Optional[str] = None, colorist_id
                   date_from: Optional[str] = None, date_to: Optional[str] = None,
                   service_type: Optional[str] = None,
                   db: Session = Depends(get_db), user: User = Depends(require_login)):
+    guard = _require_manager_or_director(user)
+    if guard:
+        return guard
+
     user_role = display_role(user)
     orders = _filtered_archive_query(db, user, branch_id, colorist_id, date_from, date_to,
                                      service_type).all()
@@ -239,6 +256,12 @@ def _missing_completion_photo(order: Order, new_status: str, is_rework_cycle: bo
 @router.post("/order/{order_id}/status")
 def update_order_status(request: Request, order_id: int, new_status: str = Form(...), actual_volume: float = Form(None),
                         db: Session = Depends(get_db), user: User = Depends(require_login)):
+    # Смену статуса делают менеджер (форма на order_detail.html) и колорист (кнопка
+    # "Сдать заказ" на colorist_order.html) — у директора своя страница заказа
+    # полностью read-only, прав на смену статуса у него быть не должно.
+    if not (user_has_role(user, "менеджер") or user_has_role(user, "колорист")):
+        return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+
     # Белый список статусов: без него new_status принял бы любую строку из формы
     # (включая "Отменен" в обход отдельного роута /order/{id}/cancel с проверкой
     # роли "менеджер").
@@ -315,6 +338,12 @@ def cancel_order(request: Request, order_id: int, db: Session = Depends(get_db),
 @router.post("/order/{order_id}/upload")
 def upload_photo(request: Request, order_id: int, photo_type: str = Form(...), file: UploadFile = File(...),
                  db: Session = Depends(get_db), user: User = Depends(require_login)):
+    # Загрузка фото есть только на order_detail.html (менеджер) и colorist_order.html
+    # (колорист) — у директора страница заказа read-only, он не должен иметь возможность
+    # незаметно подменить фото-доказательства заказа в чужом филиале.
+    if not (user_has_role(user, "менеджер") or user_has_role(user, "колорист")):
+        return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+
     # photo_type идёт прямо в ключ файла в хранилище — проверяем его по белому списку
     # ДО сохранения, иначе значение вроде "../../../static/css/legacy" даёт запись
     # произвольного файла (path traversal).
@@ -379,6 +408,10 @@ def print_order(request: Request, order_id: int, db: Session = Depends(get_db),
 @router.get("/clients")
 def view_clients(request: Request, q: Optional[str] = None, branch_id: Optional[str] = None, page: int = 1,
                  db: Session = Depends(get_db), user: User = Depends(require_login)):
+    guard = _require_manager_or_director(user)
+    if guard:
+        return guard
+
     user_role = display_role(user)
     query = db.query(Client)
     query = scope_query_to_branch(query, Client, user, branch_id)
@@ -433,6 +466,10 @@ def create_client(request: Request, client_name: str = Form(...), branch_id: int
 def view_client(request: Request, client_id: int, date_from: Optional[str] = None, date_to: Optional[str] = None,
                 service_type: Optional[str] = None,
                 db: Session = Depends(get_db), user: User = Depends(require_login)):
+    guard = _require_manager_or_director(user)
+    if guard:
+        return guard
+
     client = get_in_branch_or_none(db, Client, client_id, user)
     if not client:
         return RedirectResponse(url="/dashboard", status_code=303)
