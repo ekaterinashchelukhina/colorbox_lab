@@ -58,13 +58,13 @@
             </p>
 
             {% if order.colorist and order.status in ["В очереди", "В работе"] and colorists %}
-            <form action="/order/{{ order.id }}/reassign-colorist" method="post" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
-                <select name="colorist_id" style="flex: 1; min-width: 0; padding: 7px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; background: white;">
+            <form action="/order/{{ order.id }}/reassign-colorist" method="post" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                <select name="colorist_id" style="width: 100%; padding: 7px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; background: white; box-sizing: border-box;">
                     {% for c in colorists %}
                     <option value="{{ c.id }}" {% if order.colorist and c.id == order.colorist.id %}selected{% endif %}>{{ c.username }}</option>
                     {% endfor %}
                 </select>
-                <button type="submit" class="btn-action btn-action-blue">Передать</button>
+                <button type="submit" class="btn-action btn-action-blue" style="align-self: flex-start;">Передать</button>
             </form>
             {% endif %}
         </div>
