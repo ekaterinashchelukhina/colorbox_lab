@@ -268,3 +268,91 @@ def test_reassign_colorist_rejects_colorist_from_another_branch(client, db_sessi
 
     db_session.refresh(order)
     assert order.colorist_id == colorist_a.id
+
+
+def test_manager_cannot_set_order_v_rabote(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди")
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/status", data={"new_status": "В работе"})
+
+    assert "только колорист" in resp.text
+    db_session.refresh(order)
+    assert order.status == "В очереди"
+
+
+def test_manager_cannot_set_order_gotovo(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В работе", service_type="Слив по коду")
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/status", data={"new_status": "Готово"})
+
+    assert "только колорист" in resp.text
+    db_session.refresh(order)
+    assert order.status == "В работе"
+
+
+def test_colorist_can_take_order_into_work(client, db_session):
+    branch = make_branch(db_session)
+    colorist = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди", service_type="Слив по коду")
+    login_session(db_session, client, colorist)
+
+    resp = client.post(f"/order/{order.id}/status", data={"new_status": "В работе"}, follow_redirects=False)
+
+    assert resp.status_code == 303
+    db_session.refresh(order)
+    assert order.status == "В работе"
+    assert order.colorist_id == colorist.id
+
+
+def test_colorist_can_release_own_order(client, db_session):
+    branch = make_branch(db_session)
+    colorist = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В работе", colorist_id=colorist.id)
+    login_session(db_session, client, colorist)
+
+    resp = client.post(f"/order/{order.id}/release", follow_redirects=False)
+
+    assert resp.status_code == 303
+    db_session.refresh(order)
+    assert order.status == "В очереди"
+    assert order.colorist_id is None
+
+
+def test_colorist_cannot_release_someone_elses_order(client, db_session):
+    branch = make_branch(db_session)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В работе", colorist_id=colorist_a.id)
+    login_session(db_session, client, colorist_b)
+
+    client.post(f"/order/{order.id}/release")
+
+    db_session.refresh(order)
+    assert order.status == "В работе"
+    assert order.colorist_id == colorist_a.id
+
+
+def test_manager_cannot_release_order(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В работе", colorist_id=colorist.id)
+    login_session(db_session, client, manager)
+
+    client.post(f"/order/{order.id}/release")
+
+    db_session.refresh(order)
+    assert order.status == "В работе"
+    assert order.colorist_id == colorist.id

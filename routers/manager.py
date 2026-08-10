@@ -26,6 +26,12 @@ PHOTO_REQUIRED_SERVICE_TYPES = ["Подбор", "Экспресс-подбор"]
 # роли "менеджер". Без этого списка new_status принял бы любую строку из формы.
 ORDER_STATUSES = ["В очереди", "В работе", "Готово", "Ожидает выдачи", "Выдано"]
 
+# "В работе" выставляется только нажатием "Взять в работу" на colorist_dashboard.html,
+# "Готово" — только "Сдать заказ" на colorist_order.html. У менеджера в select на
+# order_detail.html этих вариантов нет вообще, но без проверки здесь ничто не мешало
+# отправить их прямым запросом в обход интерфейса.
+COLORIST_ONLY_STATUSES = ["В работе", "Готово"]
+
 # Соответствие photo_type из формы загрузки полю заказа, куда сохранить путь к файлу.
 PHOTO_TYPE_FIELDS = {
     "detail": "photo_detail", "scales": "photo_scales", "after": "photo_after",
@@ -225,7 +231,7 @@ def view_order(request: Request, order_id: int, db: Session = Depends(get_db),
     if not order:
         return RedirectResponse(url="/dashboard", status_code=303)
 
-    context = {"order": order}
+    context = {"order": order, "viewer_id": user.id}
     if user_has_role(user, "колорист"):
         template_name = "colorist_order.html"
     elif user_has_role(user, "директор"):
@@ -272,6 +278,8 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
     # роли "менеджер").
     if new_status not in ORDER_STATUSES:
         return HTMLResponse("<h2>Ошибка: Недопустимый статус.</h2>")
+    if new_status in COLORIST_ONLY_STATUSES and not user_has_role(user, "колорист"):
+        return HTMLResponse("<h2>Ошибка: Этот статус выставляет только колорист.</h2>")
 
     order = get_in_branch_or_none(db, Order, order_id, user)
     if order:
@@ -328,6 +336,24 @@ def reassign_colorist(request: Request, order_id: int, colorist_id: int = Form(.
         order.colorist_id = new_colorist.id
         db.commit()
     return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+
+
+@router.post("/order/{order_id}/release")
+def release_order(request: Request, order_id: int, db: Session = Depends(get_db),
+                  user: User = Depends(require_login)):
+    """Колорист отказывается от своего заказа — colorist_id сбрасывается, заказ
+    возвращается в общую очередь филиала (виден любому колористу на смене, см.
+    фильтр в colorist_dashboard()). Только владелец заказа может от него отказаться —
+    иначе любой колорист мог бы снять чужой заказ с закрепления."""
+    if not user_has_role(user, "колорист"):
+        return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+
+    order = get_in_branch_or_none(db, Order, order_id, user)
+    if order and order.colorist_id == user.id and order.status in ["В очереди", "В работе"]:
+        order.colorist_id = None
+        order.status = "В очереди"
+        db.commit()
+    return RedirectResponse(url="/colorist", status_code=303)
 
 
 @router.post("/order/{order_id}/rework")

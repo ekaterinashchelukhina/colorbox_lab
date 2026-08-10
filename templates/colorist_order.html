@@ -17,9 +17,17 @@
 <div class="container-fluid px-3 py-3" style="max-width: 600px; margin: auto;">
 
     <!-- Навигация -->
-    <div class="d-flex align-items-center mb-4 border-bottom pb-3">
-        <a href="/colorist" class="btn btn-outline-secondary btn-sm me-3 fw-bold">← В очередь</a>
-        <h2 class="h5 mb-0 fw-bold">Заказ #{{ order.id }}</h2>
+    <div class="d-flex align-items-center justify-content-between mb-4 border-bottom pb-3">
+        <div class="d-flex align-items-center">
+            <a href="/colorist" class="btn btn-outline-secondary btn-sm me-3 fw-bold">← В очередь</a>
+            <h2 class="h5 mb-0 fw-bold">Заказ #{{ order.id }}</h2>
+        </div>
+        {% if order.colorist_id == viewer_id and order.status in ['В очереди', 'В работе'] %}
+        <form action="/order/{{ order.id }}/release" method="post"
+              onsubmit="return confirm('Отказаться от заказа? Он вернётся в общую очередь — его сможет взять любой колорист на смене.');">
+            <button type="submit" class="btn btn-outline-danger btn-sm fw-bold">Отказаться</button>
+        </form>
+        {% endif %}
     </div>
 
     <!-- Информация о заказе -->
