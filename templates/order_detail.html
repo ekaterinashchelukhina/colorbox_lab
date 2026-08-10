@@ -54,15 +54,30 @@
                 {% else %}Ожидает колориста{% endif %}
             </p>
 
-            {% if order.colorist and order.status in ["В очереди", "В работе"] and colorists %}
-            <form action="/order/{{ order.id }}/reassign-colorist" method="post" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
-                <select name="colorist_id" style="width: 100%; padding: 7px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; background: white; box-sizing: border-box;">
-                    {% for c in colorists %}
-                    <option value="{{ c.id }}" {% if order.colorist and c.id == order.colorist.id %}selected{% endif %}>{{ c.username }}</option>
-                    {% endfor %}
-                </select>
-                <button type="submit" class="btn-action btn-action-blue" style="align-self: flex-start;">Передать</button>
-            </form>
+            {% if order.colorist and not is_locked %}
+                {% if order.pending_colorist_id %}
+                <div style="margin-top: 8px; padding: 10px 12px; background: #fdf3d9; border-radius: 6px; font-size: 12px; color: #7a5c05;">
+                    <strong>Ожидает подтверждения передачи</strong> → {{ order.pending_colorist.username }}
+                    <div style="margin-top: 4px;">
+                        {{ order.colorist.username }}: {% if order.transfer_confirmed_by_current %}✅ согласен{% else %}⏳ ждём ответа{% endif %}
+                        &nbsp;·&nbsp;
+                        {{ order.pending_colorist.username }}: {% if order.transfer_confirmed_by_new %}✅ согласен{% else %}⏳ ждём ответа{% endif %}
+                    </div>
+                    <form action="/order/{{ order.id }}/transfer-cancel" method="post" style="margin-top: 8px;">
+                        <button type="submit" class="btn-action btn-action-muted" style="font-size: 11px; padding: 4px 10px;">Отменить запрос</button>
+                    </form>
+                </div>
+                {% elif colorists %}
+                <form action="/order/{{ order.id }}/reassign-colorist" method="post" style="display: flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                    <select name="colorist_id" style="width: 100%; padding: 7px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; background: white; box-sizing: border-box;">
+                        {% for c in colorists %}
+                        <option value="{{ c.id }}" {% if order.colorist and c.id == order.colorist.id %}selected{% endif %}>{{ c.username }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn-action btn-action-blue" style="align-self: flex-start;">Предложить передать</button>
+                </form>
+                <p style="font-size: 11px; color: #7f8c8d; margin: 4px 0 0;">Заказ перейдёт новому колористу только после согласия обеих сторон.</p>
+                {% endif %}
             {% endif %}
         </div>
 

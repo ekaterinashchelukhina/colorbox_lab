@@ -35,6 +35,9 @@
                     {% elif order.colorist_deleted_name %}{{ order.colorist_deleted_name }} (удалён)
                     {% else %}Ожидает колориста{% endif %}
                 </span>
+                {% if order.pending_colorist_id %}
+                <br><span style="font-size: 12px; color: #8a6a06;">🔄 Ожидает согласия на передачу колористу {{ order.pending_colorist.username }}</span>
+                {% endif %}
             </p>
         </div>
 

@@ -45,7 +45,7 @@ def colorist_dashboard(request: Request, db: Session = Depends(get_db)):
         ).all()
 
     return templates.TemplateResponse(request=request, name="colorist_dashboard.html", context={
-        "username": user.username, "active_shift": active_shift, "orders": orders
+        "username": user.username, "active_shift": active_shift, "orders": orders, "viewer_id": user.id
     })
 
 

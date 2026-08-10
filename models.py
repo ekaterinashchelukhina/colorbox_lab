@@ -82,6 +82,14 @@ class Order(Base):
     # который вообще ещё никто не брал в работу (в обоих случаях colorist_id = None).
     colorist_deleted_name = Column(String, nullable=True)
 
+    # Передача заказа другому колористу (routers/manager.py: reassign_colorist/
+    # transfer_respond) требует согласия ОБЕИХ сторон — той, у кого забирают, и той,
+    # кому предлагают. colorist_id не меняется, пока оба флага не станут True; отказ
+    # любой стороны сбрасывает все три поля, ничего не меняя.
+    pending_colorist_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    transfer_confirmed_by_current = Column(Boolean, default=False)
+    transfer_confirmed_by_new = Column(Boolean, default=False)
+
     # Комментарии (ролевые примечания)
     manager_comment = Column(String, nullable=True)
     colorist_comment = Column(String, nullable=True)
@@ -104,10 +112,12 @@ class Order(Base):
     branch = relationship("Branch", back_populates="orders")
     client = relationship("Client", back_populates="orders")
 
-    # Явные foreign_keys обязательны: два FK на users.id (manager_id, colorist_id) —
-    # без этого SQLAlchemy не может понять, какая связь к какой колонке относится.
+    # Явные foreign_keys обязательны: три FK на users.id (manager_id, colorist_id,
+    # pending_colorist_id) — без этого SQLAlchemy не может понять, какая связь к какой
+    # колонке относится.
     manager = relationship("User", foreign_keys=[manager_id])
     colorist = relationship("User", foreign_keys=[colorist_id])
+    pending_colorist = relationship("User", foreign_keys=[pending_colorist_id])
 
 
 class Shift(Base):

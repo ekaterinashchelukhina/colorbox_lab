@@ -351,8 +351,9 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
 @router.post("/order/{order_id}/reassign-colorist")
 def reassign_colorist(request: Request, order_id: int, colorist_id: int = Form(...),
                       db: Session = Depends(get_db), user: User = Depends(require_login)):
-    """Передаёт заказ другому колористу — единственный способ снять с заказа
-    закрепление за прежним колористом (см. проверку в update_order_status)."""
+    """Менеджер только предлагает передать заказ другому колористу — colorist_id не
+    меняется здесь. Реальный перенос происходит в transfer_respond(), и только когда
+    согласны обе стороны (см. Order.pending_colorist_id/transfer_confirmed_by_*)."""
     if not user_has_role(user, "менеджер"):
         return RedirectResponse(url=f"/order/{order_id}", status_code=303)
 
@@ -361,6 +362,8 @@ def reassign_colorist(request: Request, order_id: int, colorist_id: int = Form(.
         return RedirectResponse(url="/dashboard", status_code=303)
     if order.status in LOCKED_STATUSES:
         return error_redirect(f"/order/{order_id}", "Заказ уже выдан или отменён — колориста изменить нельзя.")
+    if order.pending_colorist_id is not None:
+        return error_redirect(f"/order/{order_id}", "Уже есть незавершённый запрос на передачу этого заказа.")
 
     # Новый колорист обязан быть колористом того же филиала, что и заказ — иначе
     # можно было бы передать заказ сотруднику, который его физически не увидит
@@ -368,8 +371,85 @@ def reassign_colorist(request: Request, order_id: int, colorist_id: int = Form(.
     new_colorist = db.query(User).filter(
         User.id == colorist_id, User.role == "Колорист", User.branch_id == order.branch_id
     ).first()
-    if new_colorist:
-        order.colorist_id = new_colorist.id
+    if not new_colorist:
+        return error_redirect(f"/order/{order_id}", "Такого колориста нет в этом филиале.")
+    if order.colorist_id == new_colorist.id:
+        return error_redirect(f"/order/{order_id}", "Заказ уже назначен этому колористу.")
+
+    order.pending_colorist_id = new_colorist.id
+    # Если заказ ещё вообще ни за кем не закреплён — отпускать некому, спрашиваем
+    # согласия только у нового колориста.
+    order.transfer_confirmed_by_current = order.colorist_id is None
+    order.transfer_confirmed_by_new = False
+    db.commit()
+    return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+
+
+@router.post("/order/{order_id}/transfer-respond")
+def transfer_respond(request: Request, order_id: int, action: str = Form(...),
+                     db: Session = Depends(get_db), user: User = Depends(require_login)):
+    """Согласие/отказ колориста на предложенную менеджером передачу заказа. И тот,
+    у кого забирают заказ (order.colorist_id), и тот, кому предлагают
+    (order.pending_colorist_id), должны отдельно принять — только тогда
+    colorist_id реально меняется. Отказ любой стороны отменяет весь запрос."""
+    if not user_has_role(user, "колорист"):
+        return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+    if action not in ("accept", "decline"):
+        return error_redirect(f"/order/{order_id}", "Недопустимое действие.")
+
+    order = get_in_branch_or_none(db, Order, order_id, user)
+    if not order or order.pending_colorist_id is None:
+        return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+
+    is_current = order.colorist_id == user.id
+    is_new = order.pending_colorist_id == user.id
+    if not (is_current or is_new):
+        return error_redirect(f"/order/{order_id}", "Этот запрос на передачу не касается вас.")
+
+    # Заказ успели выдать/отменить, пока запрос висел (например, менеджер выдал его
+    # прежнему колористу до ответа) — аннулируем запрос целиком, а не переносим заказ.
+    if order.status in LOCKED_STATUSES:
+        order.pending_colorist_id = None
+        order.transfer_confirmed_by_current = False
+        order.transfer_confirmed_by_new = False
+        db.commit()
+        return error_redirect(f"/order/{order_id}", "Заказ уже выдан или отменён — запрос на передачу отменён.")
+
+    if action == "decline":
+        order.pending_colorist_id = None
+        order.transfer_confirmed_by_current = False
+        order.transfer_confirmed_by_new = False
+        db.commit()
+        return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+
+    if is_current:
+        order.transfer_confirmed_by_current = True
+    if is_new:
+        order.transfer_confirmed_by_new = True
+
+    if order.transfer_confirmed_by_current and order.transfer_confirmed_by_new:
+        order.colorist_id = order.pending_colorist_id
+        order.pending_colorist_id = None
+        order.transfer_confirmed_by_current = False
+        order.transfer_confirmed_by_new = False
+
+    db.commit()
+    return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+
+
+@router.post("/order/{order_id}/transfer-cancel")
+def transfer_cancel(request: Request, order_id: int, db: Session = Depends(get_db),
+                    user: User = Depends(require_login)):
+    """Менеджер отзывает свой же незавершённый запрос на передачу — не нужно ждать,
+    пока обе стороны ответят, если запрос стал не нужен."""
+    if not user_has_role(user, "менеджер"):
+        return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+
+    order = get_in_branch_or_none(db, Order, order_id, user)
+    if order and order.pending_colorist_id is not None:
+        order.pending_colorist_id = None
+        order.transfer_confirmed_by_current = False
+        order.transfer_confirmed_by_new = False
         db.commit()
     return RedirectResponse(url=f"/order/{order_id}", status_code=303)
 

@@ -216,7 +216,7 @@ def test_other_colorist_cannot_take_over_assigned_order(client, db_session):
     assert order.colorist_id == colorist_a.id
 
 
-def test_manager_can_reassign_order_to_another_colorist(client, db_session):
+def test_manager_reassign_creates_pending_request_not_immediate_change(client, db_session):
     branch = make_branch(db_session)
     manager = make_user(db_session, role="Менеджер", branch=branch)
     colorist_a = make_user(db_session, role="Колорист", branch=branch)
@@ -231,13 +231,215 @@ def test_manager_can_reassign_order_to_another_colorist(client, db_session):
 
     assert resp.status_code == 303
     db_session.refresh(order)
-    assert order.colorist_id == colorist_b.id
+    # colorist_id не меняется сразу — только создаётся запрос, ждущий согласия обеих сторон
+    assert order.colorist_id == colorist_a.id
+    assert order.pending_colorist_id == colorist_b.id
+    assert order.transfer_confirmed_by_current is False
+    assert order.transfer_confirmed_by_new is False
 
-    # После передачи colorist_b может сам взять заказ в работу, colorist_a — уже нет
+
+def test_transfer_completes_only_after_both_sides_accept(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди", colorist_id=colorist_a.id)
+    login_session(db_session, client, manager)
+    client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+
+    # Новый колорист соглашается первым — передача ещё не завершена
+    login_session(db_session, client, colorist_b)
+    client.post(f"/order/{order.id}/transfer-respond", data={"action": "accept"})
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_a.id
+    assert order.transfer_confirmed_by_new is True
+    assert order.transfer_confirmed_by_current is False
+
+    # Текущий колорист тоже соглашается — только теперь заказ реально переходит
+    login_session(db_session, client, colorist_a)
+    client.post(f"/order/{order.id}/transfer-respond", data={"action": "accept"})
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_b.id
+    assert order.pending_colorist_id is None
+    assert order.transfer_confirmed_by_current is False
+    assert order.transfer_confirmed_by_new is False
+
+    # После передачи colorist_b может сам взять заказ в работу
     login_session(db_session, client, colorist_b)
     resp = client.post(f"/order/{order.id}/status", data={"new_status": "В работе"})
     db_session.refresh(order)
     assert order.status == "В работе"
+
+
+def test_transfer_decline_by_current_colorist_resets_request(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди", colorist_id=colorist_a.id)
+    login_session(db_session, client, manager)
+    client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+
+    login_session(db_session, client, colorist_b)
+    client.post(f"/order/{order.id}/transfer-respond", data={"action": "accept"})
+
+    login_session(db_session, client, colorist_a)
+    client.post(f"/order/{order.id}/transfer-respond", data={"action": "decline"})
+
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_a.id
+    assert order.pending_colorist_id is None
+    assert order.transfer_confirmed_by_current is False
+    assert order.transfer_confirmed_by_new is False
+
+
+def test_transfer_decline_by_new_colorist_resets_request(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди", colorist_id=colorist_a.id)
+    login_session(db_session, client, manager)
+    client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+
+    login_session(db_session, client, colorist_b)
+    client.post(f"/order/{order.id}/transfer-respond", data={"action": "decline"})
+
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_a.id
+    assert order.pending_colorist_id is None
+    assert order.transfer_confirmed_by_current is False
+    assert order.transfer_confirmed_by_new is False
+
+
+def test_transfer_respond_rejects_unrelated_colorist(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    colorist_c = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди", colorist_id=colorist_a.id)
+    login_session(db_session, client, manager)
+    client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+
+    login_session(db_session, client, colorist_c)
+    resp = client.post(f"/order/{order.id}/transfer-respond", data={"action": "accept"})
+
+    assert "не касается вас" in error_text(resp)
+    db_session.refresh(order)
+    assert order.transfer_confirmed_by_current is False
+    assert order.transfer_confirmed_by_new is False
+
+
+def test_reassign_auto_confirms_current_side_when_no_colorist_assigned(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди", colorist_id=None)
+    login_session(db_session, client, manager)
+
+    client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+    db_session.refresh(order)
+    assert order.transfer_confirmed_by_current is True
+    assert order.transfer_confirmed_by_new is False
+
+    # Новому колористу достаточно одного согласия — заказ никому не принадлежал
+    login_session(db_session, client, colorist_b)
+    client.post(f"/order/{order.id}/transfer-respond", data={"action": "accept"})
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_b.id
+    assert order.pending_colorist_id is None
+
+
+def test_manager_cannot_start_second_transfer_while_one_pending(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    colorist_c = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди", colorist_id=colorist_a.id)
+    login_session(db_session, client, manager)
+    client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+
+    resp = client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_c.id})
+    assert "незавершённый запрос" in error_text(resp)
+
+    db_session.refresh(order)
+    assert order.pending_colorist_id == colorist_b.id
+
+
+def test_manager_cannot_start_transfer_on_locked_order(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="Выдано", colorist_id=colorist_a.id)
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+    assert "выдан или отменён" in error_text(resp)
+
+    db_session.refresh(order)
+    assert order.pending_colorist_id is None
+
+
+def test_manager_can_cancel_pending_transfer_request(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди", colorist_id=colorist_a.id)
+    login_session(db_session, client, manager)
+    client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+
+    resp = client.post(f"/order/{order.id}/transfer-cancel", follow_redirects=False)
+    assert resp.status_code == 303
+
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_a.id
+    assert order.pending_colorist_id is None
+    assert order.transfer_confirmed_by_current is False
+    assert order.transfer_confirmed_by_new is False
+
+    # Запрос отозван — колорист, не имеющий отношения к делу, больше не может ответить на него
+    login_session(db_session, client, colorist_b)
+    resp = client.post(f"/order/{order.id}/transfer-respond", data={"action": "accept"}, follow_redirects=False)
+    assert resp.status_code == 303
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_a.id
+
+
+def test_pending_transfer_auto_cancelled_if_order_becomes_locked(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди", colorist_id=colorist_a.id)
+    login_session(db_session, client, manager)
+    client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+
+    # Заказ блокируется (например, выдан) пока запрос ещё висит
+    order.status = "Выдано"
+    db_session.commit()
+
+    login_session(db_session, client, colorist_b)
+    resp = client.post(f"/order/{order.id}/transfer-respond", data={"action": "accept"})
+    assert "выдан или отменён" in error_text(resp)
+
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_a.id
+    assert order.pending_colorist_id is None
+    assert order.transfer_confirmed_by_current is False
+    assert order.transfer_confirmed_by_new is False
 
 
 def test_reassign_colorist_blocked_for_non_manager(client, db_session):

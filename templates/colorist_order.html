@@ -30,6 +30,47 @@
         {% endif %}
     </div>
 
+    <!-- Запрос на передачу заказа — нужно согласие обеих сторон -->
+    {% if order.pending_colorist_id %}
+        {% if order.colorist_id == viewer_id %}
+        <div class="card shadow-sm border-0 rounded-4 p-3 mb-4" style="background:#fdf3d9;">
+            <p class="mb-2 small fw-bold text-dark">Менеджер предлагает передать этот заказ колористу «{{ order.pending_colorist.username }}».</p>
+            {% if order.transfer_confirmed_by_current %}
+            <p class="mb-0 small text-success fw-bold">✅ Вы уже согласились, ждём ответа второй стороны.</p>
+            {% else %}
+            <div class="d-flex gap-2">
+                <form action="/order/{{ order.id }}/transfer-respond" method="post" class="flex-fill">
+                    <input type="hidden" name="action" value="accept">
+                    <button type="submit" class="btn btn-success btn-sm w-100 fw-bold">Согласен отдать</button>
+                </form>
+                <form action="/order/{{ order.id }}/transfer-respond" method="post" class="flex-fill">
+                    <input type="hidden" name="action" value="decline">
+                    <button type="submit" class="btn btn-outline-danger btn-sm w-100 fw-bold">Оставить себе</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% elif order.pending_colorist_id == viewer_id %}
+        <div class="card shadow-sm border-0 rounded-4 p-3 mb-4" style="background:#eaf2fb;">
+            <p class="mb-2 small fw-bold text-dark">Менеджер предлагает передать вам этот заказ{% if order.colorist %} от колориста «{{ order.colorist.username }}»{% endif %}.</p>
+            {% if order.transfer_confirmed_by_new %}
+            <p class="mb-0 small text-success fw-bold">✅ Вы уже согласились, ждём ответа второй стороны.</p>
+            {% else %}
+            <div class="d-flex gap-2">
+                <form action="/order/{{ order.id }}/transfer-respond" method="post" class="flex-fill">
+                    <input type="hidden" name="action" value="accept">
+                    <button type="submit" class="btn btn-success btn-sm w-100 fw-bold">Принять заказ</button>
+                </form>
+                <form action="/order/{{ order.id }}/transfer-respond" method="post" class="flex-fill">
+                    <input type="hidden" name="action" value="decline">
+                    <button type="submit" class="btn btn-outline-danger btn-sm w-100 fw-bold">Отказаться</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+    {% endif %}
+
     <!-- Информация о заказе -->
     <div class="card shadow-sm border-0 rounded-4 p-3 mb-4">
         <div class="d-flex justify-content-between mb-2">
