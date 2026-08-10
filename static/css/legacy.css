@@ -93,3 +93,39 @@ input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; bor
 .order-title { margin: 0; color: #2c3e50; }
 .paint-code-row { margin: 12px 0 8px 0; }
 .actual-volume-value { margin: 8px 0; color: #27ae60; }
+
+/* --- Мобильная адаптация страниц на legacy.css (карточка заказа, клиент, формы) ---
+   Причина «съезжающей» вёрстки на телефонах: у элементов ниже стоит фиксированный
+   min-width (250-300px), который на узких экранах (320-375px) шире, чем реально
+   доступное место внутри .card, и flex не даёт им сжаться — блок вылезает за
+   границы экрана и тянет за собой всё остальное (кнопки, текст) в горизонтальный
+   скролл. На мобильном просто убираем min-width, чтобы блоки складывались в один
+   столбец на полную ширину. */
+@media (max-width: 640px) {
+    .card, .form-box { padding: 15px; }
+
+    .order-data-panel,
+    .detail-side-column,
+    .comment-column,
+    .photo-panel-before,
+    .photo-panel-scales,
+    .photo-panel-after,
+    .photo-panel-recipe,
+    .photo-panel-rework {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .order-header-toolbar { row-gap: 12px; }
+    .order-header-toolbar form { width: 100%; }
+    .order-header-toolbar select { flex: 1 1 auto; min-width: 0; }
+
+    .upload-form-row { flex-wrap: wrap; }
+    .upload-file-input { max-width: 100%; flex: 1 1 auto; }
+
+    th, td { padding: 8px 6px; }
+}
+
+/* Длинные значения без пробелов (модели авто, названия СТО) не должны раздвигать
+   карточки и ячейки таблиц в стороны на узких экранах. */
+.card, .form-box, td, th { overflow-wrap: break-word; }
