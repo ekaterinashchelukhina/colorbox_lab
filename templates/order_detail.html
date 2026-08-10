@@ -57,7 +57,7 @@
                 {% else %}Ожидает колориста{% endif %}
             </p>
 
-            {% if order.colorist and order.status in ["В очереди", "В работе"] and colorists|length > 1 %}
+            {% if order.colorist and order.status in ["В очереди", "В работе"] and colorists %}
             <form action="/order/{{ order.id }}/reassign-colorist" method="post" style="display: flex; gap: 8px; margin-top: 8px;">
                 <select name="colorist_id" style="flex: 1; padding: 7px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; background: white;">
                     {% for c in colorists %}
