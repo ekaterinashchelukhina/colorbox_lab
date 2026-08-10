@@ -37,7 +37,10 @@ input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; bor
 .date-input { padding: 8px; border-radius: 5px; border: 1px solid #bdc3c7; }
 .comment-column { flex: 1; min-width: 280px; }
 .detail-side-column { flex: 1; min-width: 300px; display: flex; flex-direction: column; gap: 20px; box-sizing: border-box; }
-.photo-panels-row { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px; }
+/* 2 фотографии в строке, а не в один растянутый ряд из 3-4 — с длинными заголовками
+   панелей (например "Деталь ПОСЛЕ работы") иначе не остаётся места и текст рвётся
+   на мобильном по одной букве на строку. */
+.photo-panels-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 15px; }
 .order-header-toolbar { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; border-bottom: 2px solid #ecf0f1; padding-bottom: 15px; margin-bottom: 20px; }
 .detail-columns-row { display: flex; gap: 20px; flex-wrap: wrap; }
 .comments-row { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px; }
@@ -72,17 +75,17 @@ input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; bor
    (в отличие от order_detail.html), нужна явная визуальная подсказка "фото готово". */
 .upload-zone.is-filled { border-color: #27ae60; border-style: solid; background: #eafaf1; color: #1e8449; }
 .paint-code-value { font-size: 18px; color: #e74c3c; font-weight: bold; }
-.photo-panel-rework { flex: 1; min-width: 250px; background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box; }
-.photo-panel-after { flex: 1; min-width: 250px; background: #e8f8f5; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #a3e4d7; box-sizing: border-box; }
-.photo-panel-recipe { flex: 1; min-width: 250px; background: #eaf2fb; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #aecbe8; box-sizing: border-box; }
+.photo-panel-rework { background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box; }
+.photo-panel-after { background: #e8f8f5; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #a3e4d7; box-sizing: border-box; }
+.photo-panel-recipe { background: #eaf2fb; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #aecbe8; box-sizing: border-box; }
 .status-badge { background: #ecf0f1; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; color: #34495e; }
 .rework-badge { background: #8e44ad; color: white; padding: 4px 10px; border-radius: 4px; font-size: 14px; font-weight: bold; }
 .order-data-panel { flex: 1; min-width: 300px; background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1; box-sizing: border-box; }
 .service-type-badge { background: #8e44ad; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .client-info-panel { background: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #ecf0f1; }
 .finance-panel { background: #e8f6f3; padding: 20px; border-radius: 8px; border: 1px solid #1abc9c; }
-.photo-panel-before { flex: 1; min-width: 250px; background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ecf0f1; box-sizing: border-box; }
-.photo-panel-scales { flex: 1; min-width: 250px; background: #fff8e1; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ffe082; box-sizing: border-box; }
+.photo-panel-before { background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ecf0f1; box-sizing: border-box; }
+.photo-panel-scales { background: #fff8e1; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #ffe082; box-sizing: border-box; }
 .photo-thumb { max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; margin-bottom: 10px; background: white; border: 1px solid #ddd; }
 .photo-thumb-linked { max-width: 100%; height: 180px; object-fit: contain; border-radius: 4px; background: white; border: 1px solid #ddd; }
 .photo-placeholder-rework { height: 180px; background: #f4ecf7; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #a569bd; margin-bottom: 10px; border: 2px dashed #d7bde2; font-size: 13px; }
@@ -115,12 +118,7 @@ input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; bor
 
     .order-data-panel,
     .detail-side-column,
-    .comment-column,
-    .photo-panel-before,
-    .photo-panel-scales,
-    .photo-panel-after,
-    .photo-panel-recipe,
-    .photo-panel-rework {
+    .comment-column {
         min-width: 0;
         width: 100%;
     }
