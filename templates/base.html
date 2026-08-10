@@ -5,13 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>{% block title %}Colorist CRM{% endblock %}</title>
 
-    <!-- TODO: Play CDN не предназначен для продакшна (CSS генерируется JS на каждой
-         загрузке страницы, нет purge/минификации, приложение зависит от доступности
-         cdn.tailwindcss.com) и не поддерживает Subresource Integrity — это динамический
-         скрипт, а не статичный файл с фиксированным хэшем. Заменить на билд через
-         Tailwind CLI (standalone-бинарник, Node не обязателен) и подключать
-         static/css/tailwind.css локально. -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Собрано локально из static/css/tailwind-input.css (см. package.json, "npm run build:css") —
+         больше не зависит от cdn.tailwindcss.com в рантайме. -->
+    <link rel="stylesheet" href="/static/css/tailwind.css">
 
     <!-- Стили для страниц, ещё не переведённых на Tailwind (см. static/css/legacy.css) -->
     <link rel="stylesheet" href="/static/css/legacy.css">

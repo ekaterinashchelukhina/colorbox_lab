@@ -20,3 +20,7 @@ static/uploads/
 __pycache__/
 .DS_Store
 .venv/
+
+# Зависимости для сборки Tailwind CSS (только для разработки, см. package.json).
+# static/css/tailwind.css — собранный результат — коммитится, node_modules нет.
+node_modules/

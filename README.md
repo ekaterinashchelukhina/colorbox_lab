@@ -159,6 +159,20 @@ uvicorn main:app --reload
 
 Приложение будет доступно на `http://127.0.0.1:8000/`. Войдите под учётной записью директора, затем создайте филиалы и сотрудников (менеджеров и колористов) в разделе `/director/users`.
 
+### Сборка Tailwind CSS
+
+`static/css/tailwind.css` собран заранее и закоммичен в репозиторий — само приложение
+Node не требует. Пересобирать его нужно только после изменения классов в `templates/`:
+
+```bash
+npm install
+npm run build:css      # разовая сборка (static/css/tailwind.css)
+npm run watch:css      # пересборка при изменении шаблонов, для разработки
+```
+
+Конфиг — `tailwind.config.js` (`content: ["./templates/**/*.html"]`), исходник —
+`static/css/tailwind-input.css`.
+
 ### Деплой на VPS (systemd + nginx)
 
 `uvicorn main:app --reload` выше — только для локальной разработки (`--reload` следит за

@@ -1,0 +1,12 @@
+{
+  "name": "colorbox-lab-frontend",
+  "private": true,
+  "description": "Сборка Tailwind CSS для static/css/tailwind.css — только для разработки, продакшну Node не нужен (см. README).",
+  "scripts": {
+    "build:css": "tailwindcss -i static/css/tailwind-input.css -o static/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -i static/css/tailwind-input.css -o static/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
+}
