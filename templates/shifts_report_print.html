@@ -87,7 +87,7 @@
         </tbody>
     </table>
 
-    <script src="/static/js/local-time.js"></script>
+    <script src="/static/js/local-time.js?v={{ asset_version('static/js/local-time.js') }}"></script>
     <script>
         document.getElementById('gen_date').innerText = new Date().toLocaleDateString();
     </script>

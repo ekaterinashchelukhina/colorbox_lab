@@ -1,5 +1,6 @@
 import ast
 import json
+import os
 from datetime import datetime
 from io import BytesIO
 from typing import List, Optional
@@ -22,6 +23,20 @@ CANCELLED_STATUS = "Отменен"
 
 # Инициализируем шаблоны здесь, чтобы использовать их во всех файлах
 templates = Jinja2Templates(directory="templates")
+
+
+def asset_version(rel_path: str) -> int:
+    """mtime статического файла — используется в шаблонах как ?v=... у ссылок на
+    static/css/*.css и static/js/*.js, чтобы браузер не отдавал закэшированную версию
+    после правок вёрстки (без этого URL файла не менялся годами, и правки визуально
+    "не доезжали" до пользователя без ручного сброса кэша)."""
+    try:
+        return int(os.path.getmtime(rel_path))
+    except OSError:
+        return 0
+
+
+templates.env.globals["asset_version"] = asset_version
 
 
 class InvalidImageError(Exception):

@@ -7,10 +7,11 @@
 
     <!-- Собрано локально из static/css/tailwind-input.css (см. package.json, "npm run build:css") —
          больше не зависит от cdn.tailwindcss.com в рантайме. -->
-    <link rel="stylesheet" href="/static/css/tailwind.css">
+    <link rel="stylesheet" href="/static/css/tailwind.css?v={{ asset_version('static/css/tailwind.css') }}">
 
-    <!-- Стили для страниц, ещё не переведённых на Tailwind (см. static/css/legacy.css) -->
-    <link rel="stylesheet" href="/static/css/legacy.css">
+    <!-- Стили для страниц, ещё не переведённых на Tailwind (см. static/css/legacy.css).
+         ?v=mtime — чтобы браузер не отдавал закэшированную версию после правок вёрстки. -->
+    <link rel="stylesheet" href="/static/css/legacy.css?v={{ asset_version('static/css/legacy.css') }}">
 </head>
 <body class="bg-[#f4f4f9] text-gray-800 font-sans m-0 min-h-screen flex flex-col">
 
@@ -43,6 +44,6 @@
     </main>
 
     <!-- Перевод времени из UTC в часовой пояс браузера (см. static/js/local-time.js) -->
-    <script src="/static/js/local-time.js"></script>
+    <script src="/static/js/local-time.js?v={{ asset_version('static/js/local-time.js') }}"></script>
 </body>
 </html>
