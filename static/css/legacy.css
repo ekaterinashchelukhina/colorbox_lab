@@ -95,6 +95,18 @@ input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; bor
 .photo-panel-title-scales { margin-top: 0; color: #d35400; font-size: 14px; }
 .photo-panel-title-after { margin-top: 0; color: #16a085; font-size: 14px; }
 .photo-panel-title-recipe { margin-top: 0; color: #2c3e50; font-size: 14px; }
+/* Заголовки разной длины ("Фото рецепта" — 1 строка, "Деталь ПОСЛЕ работы" — 2)
+   иначе сдвигают фото и кнопку "Сделать фото" на разную высоту между соседними
+   панелями в одном ряду сетки. Резервируем высоту под 2 строки всегда. */
+.photo-panel-title-rework,
+.photo-panel-title-before,
+.photo-panel-title-scales,
+.photo-panel-title-after,
+.photo-panel-title-recipe {
+    min-height: 2.6em;
+    line-height: 1.3;
+    margin-bottom: 10px;
+}
 .field-row { margin: 8px 0; }
 .order-title { margin: 0; color: #2c3e50; }
 .paint-code-row { margin: 12px 0 8px 0; }
