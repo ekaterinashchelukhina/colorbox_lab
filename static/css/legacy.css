@@ -65,9 +65,12 @@ input { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; bor
 
 /* Кликабельная зона загрузки фото — как у колориста (colorist_order.html), но переиспользуемая
    через класс, а не инлайновый <style>. Тап/выбор файла сразу отправляет форму. */
-.upload-zone { display: block; border: 2px dashed #bdc3c7; background: #ecf0f1; border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; font-size: 12px; font-weight: bold; color: #7f8c8d; transition: background-color 0.2s; }
+.upload-zone { display: block; border: 2px dashed #bdc3c7; background: #ecf0f1; border-radius: 6px; padding: 10px; text-align: center; cursor: pointer; font-size: 12px; font-weight: bold; color: #7f8c8d; transition: background-color 0.2s, border-color 0.2s, color 0.2s; }
 .upload-zone:active { background-color: #dfe6e9; }
 .upload-zone input[type="file"] { display: none; }
+/* Состояние после выбора файла — форма с этой зоной не отправляется сразу
+   (в отличие от order_detail.html), нужна явная визуальная подсказка "фото готово". */
+.upload-zone.is-filled { border-color: #27ae60; border-style: solid; background: #eafaf1; color: #1e8449; }
 .paint-code-value { font-size: 18px; color: #e74c3c; font-weight: bold; }
 .photo-panel-rework { flex: 1; min-width: 250px; background: #f4ecf7; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #d7bde2; box-sizing: border-box; }
 .photo-panel-after { flex: 1; min-width: 250px; background: #e8f8f5; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid #a3e4d7; box-sizing: border-box; }

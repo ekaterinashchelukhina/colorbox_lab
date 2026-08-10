@@ -61,7 +61,10 @@
         <div style="background: #fdf2e9; padding: 15px; border-radius: 5px; border: 1px solid #e67e22;">
             <label style="font-size: 13px; font-weight: bold; color: #d35400;">Фотография детали (Лючок)</label>
             <p style="font-size: 11px; margin: 5px 0 10px 0; color: #e67e22;">Обязательно для услуг «Подбор» и «Экспресс-подбор».</p>
-            <input type="file" name="file" accept="image/*" capture="environment" style="width: 100%; font-size: 14px;" />
+            <label class="upload-zone" id="detail-photo-zone">
+                <span id="detail-photo-zone-text">📸 Сделать фото / выбрать файл</span>
+                <input type="file" name="file" accept="image/*" capture="environment" id="detail-photo-input" />
+            </label>
         </div>
 
         <div class="form-row">
@@ -81,4 +84,23 @@
         </div>
     </form>
 </div>
+
+<script>
+    (function () {
+        var input = document.getElementById('detail-photo-input');
+        var zone = document.getElementById('detail-photo-zone');
+        var text = document.getElementById('detail-photo-zone-text');
+        if (!input) return;
+
+        input.addEventListener('change', function () {
+            if (input.files && input.files.length > 0) {
+                zone.classList.add('is-filled');
+                text.textContent = '✅ Фото готово: ' + input.files[0].name;
+            } else {
+                zone.classList.remove('is-filled');
+                text.textContent = '📸 Сделать фото / выбрать файл';
+            }
+        });
+    })();
+</script>
 {% endblock %}
