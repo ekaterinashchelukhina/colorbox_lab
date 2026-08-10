@@ -86,6 +86,22 @@ def test_cannot_cancel_already_issued_order(client, db_session):
     assert order.status == "Выдано"
 
 
+def test_manager_cannot_cancel_order_already_taken_by_colorist(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, manager=manager, status="В работе",
+                       colorist_id=colorist.id)
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/cancel")
+
+    assert "Ошибка" in resp.text
+    db_session.refresh(order)
+    assert order.status == "В работе"
+
+
 def test_manager_cannot_cancel_another_branchs_order(client, db_session):
     branch_a = make_branch(db_session, "Филиал А")
     branch_b = make_branch(db_session, "Филиал Б")

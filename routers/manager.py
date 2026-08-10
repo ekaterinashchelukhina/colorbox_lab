@@ -396,7 +396,11 @@ def send_order_to_rework(request: Request, order_id: int, db: Session = Depends(
 def cancel_order(request: Request, order_id: int, db: Session = Depends(get_db),
                  user: User = Depends(require_login)):
     """"Удаление" заказа менеджером: не физическое удаление, а перевод в архив со статусом
-    'Отменен'. Право есть только у менеджера — ни у директора, ни у колориста."""
+    'Отменен'. Право есть только у менеджера — ни у директора, ни у колориста. Отменить
+    можно только пока заказ ещё не взял в работу ни один колорист — colorist_id
+    выставляется ровно в этот момент (см. update_order_status) и с тех пор не сбрасывается
+    (кроме /release и /reassign-colorist), так что этой одной проверки достаточно и для
+    "Готово"/"Ожидает выдачи"/"Выдано" — везде там колорист уже гарантированно назначен."""
     if not user_has_role(user, "менеджер"):
         return RedirectResponse(url=f"/order/{order_id}", status_code=303)
 
@@ -405,6 +409,8 @@ def cancel_order(request: Request, order_id: int, db: Session = Depends(get_db),
         return RedirectResponse(url="/dashboard", status_code=303)
     if order.status == "Выдано":
         return HTMLResponse("<h2>Ошибка: Нельзя отменить уже выданный заказ.</h2>")
+    if order.colorist_id is not None:
+        return HTMLResponse("<h2>Ошибка: Нельзя отменить заказ — колорист уже взял его в работу.</h2>")
 
     if order.status != CANCELLED_STATUS:
         order.status = CANCELLED_STATUS
