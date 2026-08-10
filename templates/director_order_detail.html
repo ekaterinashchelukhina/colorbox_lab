@@ -31,7 +31,9 @@
             <p style="margin: 8px 0; margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 10px;">
                 <strong>Колорист:</strong>
                 <span style="color: #3498db; font-weight: bold;">
-                    {{ order.colorist.username if order.colorist else 'Удаленный сотрудник' }}
+                    {% if order.colorist %}{{ order.colorist.username }}
+                    {% elif order.colorist_deleted_name %}{{ order.colorist_deleted_name }} (удалён)
+                    {% else %}Ожидает колориста{% endif %}
                 </span>
             </p>
         </div>

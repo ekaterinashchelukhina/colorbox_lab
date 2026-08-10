@@ -54,7 +54,7 @@
                 <td>{{ order.service_type }}</td>
                 <td>{% if order.rework_count > 0 %}🎨 ×{{ order.rework_count }}{% else %}—{% endif %}</td>
                 <td>{{ order.branch.name if order.branch else "—" }}</td>
-                <td>{{ order.colorist.username if order.colorist else "—" }}</td>
+                <td>{{ order.colorist.username if order.colorist else (order.colorist_deleted_name ~ " (удалён)" if order.colorist_deleted_name else "—") }}</td>
                 <td>{% if order.created_at %}<span class="local-time" data-utc="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%d.%m.%Y %H:%M') }}</span>{% else %}—{% endif %}</td>
                 <td>{% if order.issued_at %}<span class="local-time" data-utc="{{ order.issued_at.isoformat() }}">{{ order.issued_at.strftime('%d.%m.%Y %H:%M') }}</span>{% else %}—{% endif %}</td>
                 <td class="text-right">{{ order.actual_volume if order.actual_volume else order.target_volume }} мл.</td>

@@ -29,6 +29,10 @@ def test_delete_user_with_orders_does_not_crash(client, db_session):
     assert resp.status_code == 303
     db_session.refresh(order)
     assert order.colorist_id is None
+    # Имя удалённого колориста сохраняется отдельно — иначе такой заказ было бы не
+    # отличить от заказа, который вообще ещё никто не брал в работу (colorist_id
+    # тоже None в обоих случаях).
+    assert order.colorist_deleted_name == colorist.username
 
 
 def test_cannot_delete_branch_with_dependents(client, db_session):

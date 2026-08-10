@@ -73,7 +73,7 @@
                         {% endif %}
                         <br>
                         <span class="text-[10px] text-[#7f8c8d] font-bold uppercase tracking-wider">
-                            {% if order.colorist %}Мастер: {{ order.colorist.username }}{% else %}Ожидает{% endif %}
+                            {% if order.colorist %}Мастер: {{ order.colorist.username }}{% elif order.colorist_deleted_name %}Мастер: {{ order.colorist_deleted_name }} (удалён){% else %}Ожидает{% endif %}
                         </span>
                     </td>
                     <td class="p-4 text-center">
@@ -134,6 +134,8 @@
                 <div class="text-xs text-[#7f8c8d] font-bold">
                     {% if order.colorist %}
                         👨‍🎨 {{ order.colorist.username }}
+                    {% elif order.colorist_deleted_name %}
+                        👨‍🎨 {{ order.colorist_deleted_name }} (удалён)
                     {% else %}
                         ⏳ Ожидает
                     {% endif %}

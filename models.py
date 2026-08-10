@@ -77,6 +77,11 @@ class Order(Base):
     price = Column(Float, default=0.0)
     is_paid = Column(Boolean, default=False)
 
+    # При удалении сотрудника (routers/director.py: delete_user) colorist_id обнуляется —
+    # без снимка имени заказ, который реально кто-то делал, стал бы неотличим от заказа,
+    # который вообще ещё никто не брал в работу (в обоих случаях colorist_id = None).
+    colorist_deleted_name = Column(String, nullable=True)
+
     # Комментарии (ролевые примечания)
     manager_comment = Column(String, nullable=True)
     colorist_comment = Column(String, nullable=True)

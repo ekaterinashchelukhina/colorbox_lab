@@ -211,8 +211,12 @@ def delete_user(request: Request, user_id: int, db: Session = Depends(get_db),
             return HTMLResponse("Ошибка: Нельзя удалить собственную учетную запись.")
 
         # Отвязываем колориста/менеджера от старых заказов — иначе delete упадёт по FK
-        # (manager_id/colorist_id не имеют ON DELETE, а сами заказы удалять нельзя)
-        db.query(Order).filter(Order.colorist_id == user_id).update({"colorist_id": None})
+        # (manager_id/colorist_id не имеют ON DELETE, а сами заказы удалять нельзя).
+        # Имя колориста сохраняем отдельным полем перед обнулением — иначе такой заказ
+        # в интерфейсе не отличить от заказа, который вообще ещё никто не брал в работу.
+        db.query(Order).filter(Order.colorist_id == user_id).update({
+            "colorist_id": None, "colorist_deleted_name": target_user.username,
+        })
         db.query(Order).filter(Order.manager_id == user_id).update({"manager_id": None})
 
         # Удаляем смены сотрудника
