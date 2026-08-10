@@ -283,8 +283,7 @@ python -m pytest
 | Метод | Путь | Описание |
 |---|---|---|
 | POST | `/manager/shift/start` | Начало смены менеджера (без фото) |
-| POST | `/manager/shift/end` | Конец 
-смены менеджера (без фото) |
+| POST | `/manager/shift/end` | Конец смены менеджера (без фото) |
 | GET/POST | `/new-order` | Создание заказа |
 | GET | `/order/{order_id}` | Карточка заказа |
 | POST | `/order/{order_id}/status` | Смена статуса заказа |
