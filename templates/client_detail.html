@@ -37,58 +37,96 @@
         <a href="/client/{{ client.id }}" style="background: #ecf0f1; color: #2c3e50; padding: 9px 18px; border-radius: 5px; text-decoration: none; font-weight: bold;">Сбросить</a>
     </form>
 
-    <div class="table-responsive" style="margin-top: 15px;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
-            <thead>
-                <tr style="background: #2c3e50; color: white;">
-                    <th class="table-header-cell">№</th>
-                    <th class="table-header-cell">Дата</th>
-                    <th class="table-header-cell">Автомобиль</th>
-                    <th class="table-header-cell">Код краски</th>
-                    <th class="table-header-cell">Деталь</th>
-                    <th class="table-header-cell">Тип услуги</th>
-                    <th class="table-header-cell">Объем</th>
-                    <th class="table-header-cell">Статус</th>
-                    <th class="table-header-cell">Действие</th>
+    <!-- ДЕСКТОПНАЯ ВЕРСИЯ: ТАБЛИЦА (тот же паттерн, что на dashboard/archive/director_*) -->
+    <div class="hidden md:block bg-white rounded-xl shadow-sm border border-[#ecf0f1] overflow-hidden" style="margin-top: 15px;">
+        <table class="w-full text-left text-sm border-collapse">
+            <thead class="bg-[#2c3e50] text-white">
+                <tr>
+                    <th class="p-4 font-bold">№</th>
+                    <th class="p-4 font-bold">Дата</th>
+                    <th class="p-4 font-bold">Автомобиль</th>
+                    <th class="p-4 font-bold">Код краски</th>
+                    <th class="p-4 font-bold">Деталь</th>
+                    <th class="p-4 font-bold">Тип услуги</th>
+                    <th class="p-4 font-bold">Объем</th>
+                    <th class="p-4 font-bold">Статус</th>
+                    <th class="p-4 text-center font-bold">Действие</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody class="divide-y divide-[#ecf0f1]">
                 {% for order in orders %}
-                <tr style="border-bottom: 1px solid #eee;">
-                    <td class="table-body-cell">
-                        <a href="/order/{{ order.id }}" class="client-name-link">#{{ order.id }}</a>
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="p-4 font-bold">
+                        <a href="/order/{{ order.id }}" class="text-[#2980b9] hover:underline">#{{ order.id }}</a>
                     </td>
-                    <td style="padding: 10px; white-space: nowrap;">
+                    <td class="p-4 whitespace-nowrap">
                         {% if order.created_at %}<span class="local-time" data-format="date" data-utc="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%d.%m.%Y') }}</span>{% else %}—{% endif %}
                     </td>
-                    <td class="table-body-cell">{{ order.car }}</td>
-                    <td class="table-body-cell"><strong>{{ order.paint_code }}</strong></td>
-                    <td class="table-body-cell">{{ order.detail }}</td>
-                    <td class="table-body-cell">{{ order.service_type }}</td>
-                    <td class="table-body-cell">{{ order.actual_volume if order.actual_volume else order.target_volume }} мл</td>
-                    <td class="table-body-cell">
-                        <span style="background: #ecf0f1; padding: 3px 8px; border-radius: 4px; font-size: 12px;">{{ order.status }}</span>
+                    <td class="p-4">{{ order.car }}</td>
+                    <td class="p-4 font-bold text-[#e74c3c]">{{ order.paint_code }}</td>
+                    <td class="p-4">{{ order.detail }}</td>
+                    <td class="p-4">{{ order.service_type }}</td>
+                    <td class="p-4">{{ order.actual_volume if order.actual_volume else order.target_volume }} мл</td>
+                    <td class="p-4">
+                        <span class="bg-[#ecf0f1] px-2 py-1 rounded text-xs font-bold text-[#2c3e50] inline-block">{{ order.status }}</span>
                         {% if order.rework_count > 0 %}
-                        <span style="background: #8e44ad; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 4px;">🎨 Доколеровка ×{{ order.rework_count }}</span>
+                        <span class="bg-[#8e44ad] text-white px-2 py-1 rounded text-xs font-bold ml-1 inline-block">🎨 ×{{ order.rework_count }}</span>
                         {% endif %}
                     </td>
-                    <td class="table-body-cell">
+                    <td class="p-4 text-center">
                         {% if order.status == "Выдано" %}
                         <form action="/order/{{ order.id }}/rework" method="post" onsubmit="return confirm('Отправить заказ на доколеровку? Заказ вернётся в очередь колориста.');">
-                            <button type="submit" style="background: #8e44ad; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px;">🎨 Доколеровка</button>
+                            <button type="submit" class="bg-[#8e44ad] hover:bg-[#7d3c98] text-white px-3 py-1.5 rounded-md font-bold text-xs transition-colors">🎨 Доколеровка</button>
                         </form>
                         {% endif %}
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="9" style="text-align: center; padding: 30px; color: #95a5a6;">
-                        История заказов не найдена.
-                    </td>
+                    <td colspan="9" class="p-10 text-center text-[#7f8c8d] text-[15px]">История заказов не найдена.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+
+    <!-- МОБИЛЬНАЯ ВЕРСИЯ: КАРТОЧКИ -->
+    <div class="flex flex-col gap-4 md:hidden" style="margin-top: 15px;">
+        {% for order in orders %}
+        <div class="bg-white p-4 rounded-xl border border-[#ecf0f1] shadow-sm">
+            <div class="flex justify-between items-start mb-2 border-b border-[#ecf0f1] pb-2">
+                <a href="/order/{{ order.id }}" class="font-bold text-lg text-[#2980b9] hover:underline">#{{ order.id }}</a>
+                <div class="text-right">
+                    <span class="bg-[#ecf0f1] px-2 py-1 rounded text-xs font-bold text-[#2c3e50] inline-block">{{ order.status }}</span>
+                    {% if order.rework_count > 0 %}
+                    <span class="bg-[#8e44ad] text-white px-2 py-1 rounded text-xs font-bold inline-block mt-1">🎨 ×{{ order.rework_count }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="text-sm text-gray-700 mb-2 leading-tight">
+                {{ order.car }} <span class="text-[#7f8c8d] text-xs">({{ order.detail }})</span>
+            </div>
+
+            <div class="text-[#e74c3c] font-bold text-lg mb-2">{{ order.paint_code }}</div>
+
+            <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#7f8c8d] font-bold mb-3">
+                <span>{{ order.service_type }}</span>
+                <span>{{ order.actual_volume if order.actual_volume else order.target_volume }} мл</span>
+                <span>{% if order.created_at %}<span class="local-time" data-format="date" data-utc="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%d.%m.%Y') }}</span>{% else %}—{% endif %}</span>
+            </div>
+
+            {% if order.status == "Выдано" %}
+            <form action="/order/{{ order.id }}/rework" method="post" onsubmit="return confirm('Отправить заказ на доколеровку? Заказ вернётся в очередь колориста.');" class="border-t border-[#ecf0f1] pt-3">
+                <button type="submit" class="w-full bg-[#8e44ad] hover:bg-[#7d3c98] text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors">🎨 Отправить на доколеровку</button>
+            </form>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="text-center text-[#7f8c8d] py-10 bg-white rounded-xl border border-[#ecf0f1] px-4 text-sm">
+            История заказов не найдена.
+        </div>
+        {% endfor %}
     </div>
 </div>
 {% endblock %}
