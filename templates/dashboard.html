@@ -8,20 +8,20 @@
     <!-- Шапка панели менеджера -->
     <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b-2 border-[#ecf0f1] gap-4">
         <h2 class="text-[#2c3e50] m-0 text-2xl font-bold">Текущие заказы филиала</h2>
-        <div class="flex gap-3 w-full sm:w-auto">
+        <div class="grid grid-cols-2 gap-3 w-full sm:flex sm:w-auto">
             <!-- Кнопка уже ведет на универсальный архив -->
-            <a href="/archive" class="flex-1 sm:flex-none text-center bg-[#34495e] hover:bg-[#2c3e50] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
+            <a href="/archive" class="sm:flex-none text-center bg-[#34495e] hover:bg-[#2c3e50] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
                 🗄 Архив
             </a>
-            <a href="/clients" class="flex-1 sm:flex-none text-center bg-[#8e44ad] hover:bg-[#7d3c98] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
+            <a href="/clients" class="sm:flex-none text-center bg-[#8e44ad] hover:bg-[#7d3c98] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
                 👥 Клиенты
             </a>
             {% if active_shift %}
-            <a href="/new-order" class="flex-1 sm:flex-none text-center bg-[#2ecc71] hover:bg-[#27ae60] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
+            <a href="/new-order" class="col-span-2 sm:col-span-1 sm:flex-none text-center bg-[#2ecc71] hover:bg-[#27ae60] text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-sm transition-colors">
                 + Новый заказ
             </a>
             {% else %}
-            <span title="Сначала начните смену" class="flex-1 sm:flex-none text-center bg-gray-200 text-gray-400 px-5 py-2.5 rounded-lg font-bold text-sm cursor-not-allowed">
+            <span title="Сначала начните смену" class="col-span-2 sm:col-span-1 sm:flex-none text-center bg-gray-200 text-gray-400 px-5 py-2.5 rounded-lg font-bold text-sm cursor-not-allowed">
                 + Новый заказ
             </span>
             {% endif %}
