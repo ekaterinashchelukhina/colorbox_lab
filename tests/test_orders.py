@@ -1,5 +1,5 @@
 from models import Order
-from tests.factories import make_branch, make_user, make_client, make_order, login_session
+from tests.factories import make_branch, make_user, make_client, make_order, login_session, error_text
 
 
 def _start_manager_shift(client, db_session, manager):
@@ -17,7 +17,7 @@ def test_create_order_requires_photo_for_podbor(client, db_session):
         "service_type": "Подбор", "target_volume": "100", "deadline": "2026-12-31",
     })
 
-    assert "Отсутствует фото детали" in resp.text
+    assert "Отсутствует фото детали" in error_text(resp)
     assert db_session.query(Order).count() == 0
 
 
@@ -62,7 +62,7 @@ def test_create_order_rejects_negative_volume(client, db_session):
         "service_type": "Слив по коду", "target_volume": "-50", "deadline": "2026-12-31",
     })
 
-    assert "больше нуля" in resp.text
+    assert "больше нуля" in error_text(resp)
     assert db_session.query(Order).count() == 0
 
 
@@ -78,7 +78,7 @@ def test_order_completion_rejects_negative_actual_volume(client, db_session):
 
     resp = client.post(f"/order/{order.id}/status", data={"new_status": "Готово", "actual_volume": "-10"})
 
-    assert "больше нуля" in resp.text
+    assert "больше нуля" in error_text(resp)
     db_session.refresh(order)
     assert order.status == "В очереди"
     assert order.actual_volume is None
@@ -96,7 +96,7 @@ def test_order_completion_requires_recipe_photo_for_podbor(client, db_session):
 
     resp = client.post(f"/order/{order.id}/status", data={"new_status": "Готово", "actual_volume": "95"})
 
-    assert "Отсутствует фото рецепта" in resp.text
+    assert "Отсутствует фото рецепта" in error_text(resp)
     db_session.refresh(order)
     assert order.status == "В очереди"  # статус не поменялся
 
@@ -210,7 +210,7 @@ def test_other_colorist_cannot_take_over_assigned_order(client, db_session):
 
     resp = client.post(f"/order/{order.id}/status", data={"new_status": "В работе"})
 
-    assert "закреплён за другим колористом" in resp.text
+    assert "закреплён за другим колористом" in error_text(resp)
     db_session.refresh(order)
     assert order.status == "В очереди"
     assert order.colorist_id == colorist_a.id
@@ -279,7 +279,7 @@ def test_manager_cannot_set_order_v_rabote(client, db_session):
 
     resp = client.post(f"/order/{order.id}/status", data={"new_status": "В работе"})
 
-    assert "только колорист" in resp.text
+    assert "только колорист" in error_text(resp)
     db_session.refresh(order)
     assert order.status == "В очереди"
 
@@ -293,7 +293,7 @@ def test_manager_cannot_set_order_gotovo(client, db_session):
 
     resp = client.post(f"/order/{order.id}/status", data={"new_status": "Готово"})
 
-    assert "только колорист" in resp.text
+    assert "только колорист" in error_text(resp)
     db_session.refresh(order)
     assert order.status == "В работе"
 
@@ -367,7 +367,7 @@ def test_manager_cannot_issue_order_without_saved_price(client, db_session):
 
     resp = client.post(f"/order/{order.id}/status", data={"new_status": "Выдано"})
 
-    assert "сохраните расчёт" in resp.text
+    assert "сохраните расчёт" in error_text(resp)
     db_session.refresh(order)
     assert order.status == "Ожидает выдачи"
 
@@ -381,7 +381,7 @@ def test_manager_cannot_issue_order_before_colorist_finishes(client, db_session)
 
     resp = client.post(f"/order/{order.id}/status", data={"new_status": "Выдано"})
 
-    assert "не завершён" in resp.text
+    assert "не завершён" in error_text(resp)
     db_session.refresh(order)
     assert order.status == "В очереди"
 
@@ -410,6 +410,6 @@ def test_manager_cannot_manually_set_other_statuses(client, db_session):
 
     resp = client.post(f"/order/{order.id}/status", data={"new_status": "В очереди"})
 
-    assert "только в статус" in resp.text
+    assert "только в статус" in error_text(resp)
     db_session.refresh(order)
     assert order.status == "Ожидает выдачи"

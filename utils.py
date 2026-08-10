@@ -4,8 +4,10 @@ import os
 from datetime import datetime
 from io import BytesIO
 from typing import List, Optional
+from urllib.parse import quote
 from PIL import Image, UnidentifiedImageError
 from fastapi import Request, Depends, UploadFile
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -133,6 +135,16 @@ class RedirectException(Exception):
     """Поднимается зависимостями авторизации, перехватывается обработчиком в main.py."""
     def __init__(self, url: str):
         self.url = url
+
+
+def error_redirect(url: str, message: str) -> RedirectResponse:
+    """Редирект с текстом ошибки в query-параметре ?error=... вместо отдельной страницы
+    с одним <h2>. Страница-получатель (base.html/colorist_order.html подключают
+    static/js/toast.js) на загрузке читает этот параметр, показывает всплывающую
+    подсказку и сама убирает его из адресной строки — так что и refresh не покажет
+    её повторно, и пользователь не теряет то, что уже было на экране."""
+    separator = "&" if "?" in url else "?"
+    return RedirectResponse(url=f"{url}{separator}error={quote(message)}", status_code=303)
 
 
 def user_has_role(user: Optional[User], role_name: str) -> bool:

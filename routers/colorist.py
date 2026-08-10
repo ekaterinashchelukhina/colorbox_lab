@@ -2,7 +2,7 @@ import json
 from typing import List
 
 from fastapi import APIRouter, Request, Depends, UploadFile, File
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -10,7 +10,7 @@ from database import get_db
 from models import Order, Shift, User
 from utils import (
     get_current_user, templates, require_login, save_uploaded_photos, utc_now, user_has_role,
-    InvalidImageError,
+    InvalidImageError, error_redirect,
 )
 
 router = APIRouter()
@@ -72,7 +72,7 @@ def start_shift(
     try:
         saved_files = save_uploaded_photos(photos, user.id, "start")
     except InvalidImageError as e:
-        return HTMLResponse(f"<h2>Ошибка: {e}</h2>")
+        return error_redirect("/colorist", str(e))
 
     new_shift = Shift(
         user_id=user.id,
@@ -97,7 +97,7 @@ def end_shift(
         try:
             saved_files = save_uploaded_photos(photos, user.id, "end")
         except InvalidImageError as e:
-            return HTMLResponse(f"<h2>Ошибка: {e}</h2>")
+            return error_redirect("/shift/end-screen", str(e))
 
         active_shift.end_time = utc_now()
         active_shift.end_photos = json.dumps(saved_files)

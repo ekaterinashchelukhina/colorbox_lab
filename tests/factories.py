@@ -1,5 +1,6 @@
 import secrets
 from datetime import timedelta
+from urllib.parse import unquote
 
 from models import Branch, User, Client, Order, UserSession
 from utils import utc_now
@@ -59,3 +60,12 @@ def login_session(db, http_client, user, lifetime=timedelta(days=30)):
     db.commit()
     http_client.cookies.set("access_token", token)
     return token
+
+
+def error_text(resp) -> str:
+    """Текст ошибки теперь приходит не в теле ответа, а в ?error=... у редиректа
+    (utils.error_redirect — всплывающая подсказка вместо отдельной страницы, см.
+    static/js/toast.js). С TestClient по умолчанию редирект уже проследован, так
+    что resp.url — это финальный адрес с этим же query-параметром; unquote()
+    возвращает читаемый текст вместо %D0%9E%D1%88..."""
+    return unquote(str(resp.url))

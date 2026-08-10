@@ -1,6 +1,6 @@
 """Регрессионные тесты на 'мягкое удаление' заказа менеджером (перевод в архив со
 статусом 'Отменен') — право есть только у менеджера."""
-from tests.factories import make_branch, make_user, make_client, make_order, login_session
+from tests.factories import make_branch, make_user, make_client, make_order, login_session, error_text
 
 
 def test_manager_can_cancel_order(client, db_session):
@@ -81,7 +81,7 @@ def test_cannot_cancel_already_issued_order(client, db_session):
 
     resp = client.post(f"/order/{order.id}/cancel")
 
-    assert "Ошибка" in resp.text
+    assert "уже выданный" in error_text(resp)
     db_session.refresh(order)
     assert order.status == "Выдано"
 
@@ -97,7 +97,7 @@ def test_manager_cannot_cancel_order_already_taken_by_colorist(client, db_sessio
 
     resp = client.post(f"/order/{order.id}/cancel")
 
-    assert "Ошибка" in resp.text
+    assert "колорист уже взял" in error_text(resp)
     db_session.refresh(order)
     assert order.status == "В работе"
 

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Request, Form, Depends, UploadFile, File
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -11,7 +11,7 @@ from utils import (
     get_current_user, save_order_photo, templates, require_login,
     scope_query_to_branch, utc_now, paginate_query, user_has_role, display_role,
     apply_date_range_filter, parse_optional_id, get_in_branch_or_none, InvalidImageError,
-    CANCELLED_STATUS,
+    CANCELLED_STATUS, error_redirect,
 )
 
 router = APIRouter()
@@ -188,13 +188,15 @@ def create_order(
     if not user_has_role(manager, "менеджер"):
         return RedirectResponse(url="/dashboard", status_code=303)
     if _manager_shift_not_started(db, manager):
-        return HTMLResponse("<h2>Ошибка: Сначала начните смену!</h2>")
+        # На /dashboard, не /new-order — сама форма /new-order тоже требует активную
+        # смену и без неё редиректит на /dashboard, роняя ?error= по дороге.
+        return error_redirect("/dashboard", "Сначала начните смену!")
     if not manager.branch_id:
-        return HTMLResponse("<h2>Ошибка: Нет привязки к филиалу!</h2>")
+        return error_redirect("/new-order", "Нет привязки к филиалу!")
     if target_volume <= 0:
-        return HTMLResponse("<h2>Ошибка: Требуемый объём должен быть больше нуля!</h2>")
+        return error_redirect("/new-order", "Требуемый объём должен быть больше нуля!")
     if service_type in PHOTO_REQUIRED_SERVICE_TYPES and (not file or not file.filename):
-        return HTMLResponse("<h2>Ошибка: Отсутствует фото детали!</h2>")
+        return error_redirect("/new-order", "Отсутствует фото детали!")
 
     client = _get_or_create_client(db, client_name, manager.branch_id)
 
@@ -219,7 +221,9 @@ def create_order(
         try:
             new_order.photo_detail = save_order_photo(file, f"order_{new_order.id}_detail.jpg")
         except InvalidImageError as e:
-            return HTMLResponse(f"<h2>Ошибка: {e}</h2>")
+            # Заказ уже создан (commit выше) — ведём на его карточку, а не на пустую
+            # форму, чтобы менеджер мог просто перезагрузить фото на месте.
+            return error_redirect(f"/order/{new_order.id}", str(e))
         db.commit()
     return RedirectResponse(url="/dashboard", status_code=303)
 
@@ -277,14 +281,14 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
     # (включая "Отменен" в обход отдельного роута /order/{id}/cancel с проверкой
     # роли "менеджер").
     if new_status not in ORDER_STATUSES:
-        return HTMLResponse("<h2>Ошибка: Недопустимый статус.</h2>")
+        return error_redirect(f"/order/{order_id}", "Недопустимый статус.")
     if new_status in COLORIST_ONLY_STATUSES and not user_has_role(user, "колорист"):
-        return HTMLResponse("<h2>Ошибка: Этот статус выставляет только колорист.</h2>")
+        return error_redirect(f"/order/{order_id}", "Этот статус выставляет только колорист.")
     # Менеджер вручную переводит заказ только в "Выдано" (на order_detail.html это
     # отдельная кнопка, не выпадающий список) — без этой проверки на сервере ничто
     # не мешало отправить прямым запросом и "В очереди" в обход доколеровки.
     if user_has_role(user, "менеджер") and new_status != "Выдано":
-        return HTMLResponse("<h2>Ошибка: Менеджер может вручную перевести заказ только в статус «Выдано».</h2>")
+        return error_redirect(f"/order/{order_id}", "Менеджер может вручную перевести заказ только в статус «Выдано».")
 
     order = get_in_branch_or_none(db, Order, order_id, user)
     if order:
@@ -295,9 +299,9 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
             # статуса — и менеджер мог бы выдать заказ, который колорист вообще
             # не начинал делать.
             if order.status != "Ожидает выдачи":
-                return HTMLResponse("<h2>Ошибка: Заказ ещё не готов к выдаче — фотоконтроль колориста не завершён.</h2>")
+                return error_redirect(f"/order/{order_id}", "Заказ ещё не готов к выдаче — фотоконтроль колориста не завершён.")
             if not order.price:
-                return HTMLResponse("<h2>Ошибка: Сначала сохраните расчёт в блоке «Финансы и Оплата».</h2>")
+                return error_redirect(f"/order/{order_id}", "Сначала сохраните расчёт в блоке «Финансы и Оплата».")
 
         if user_has_role(user, "колорист"):
             # Заказ уже закреплён за другим колористом (взят в работу или вернулся из
@@ -305,7 +309,7 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
             # чужой колорист не должен иметь возможность перехватить его себе через эту
             # форму. Переназначить может только менеджер через /reassign-colorist.
             if order.colorist_id is not None and order.colorist_id != user.id:
-                return HTMLResponse("<h2>Ошибка: Этот заказ закреплён за другим колористом.</h2>")
+                return error_redirect(f"/order/{order_id}", "Этот заказ закреплён за другим колористом.")
             order.colorist_id = user.id
 
         # Заказ находится в активном цикле доколеровки, пока не сдан снова
@@ -313,11 +317,11 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
 
         missing_photo = _missing_completion_photo(order, new_status, is_rework_cycle)
         if missing_photo:
-            return HTMLResponse(f"<h2>Ошибка: {missing_photo}</h2>")
+            return error_redirect(f"/order/{order_id}", missing_photo)
 
         if new_status == "Готово":
             if actual_volume is not None and actual_volume <= 0:
-                return HTMLResponse("<h2>Ошибка: Фактический объём должен быть больше нуля!</h2>")
+                return error_redirect(f"/order/{order_id}", "Фактический объём должен быть больше нуля!")
             order.status = "Ожидает выдачи"
             if actual_volume is not None:
                 order.actual_volume = actual_volume
@@ -408,9 +412,9 @@ def cancel_order(request: Request, order_id: int, db: Session = Depends(get_db),
     if not order:
         return RedirectResponse(url="/dashboard", status_code=303)
     if order.status == "Выдано":
-        return HTMLResponse("<h2>Ошибка: Нельзя отменить уже выданный заказ.</h2>")
+        return error_redirect(f"/order/{order_id}", "Нельзя отменить уже выданный заказ.")
     if order.colorist_id is not None:
-        return HTMLResponse("<h2>Ошибка: Нельзя отменить заказ — колорист уже взял его в работу.</h2>")
+        return error_redirect(f"/order/{order_id}", "Нельзя отменить заказ — колорист уже взял его в работу.")
 
     if order.status != CANCELLED_STATUS:
         order.status = CANCELLED_STATUS
@@ -432,14 +436,14 @@ def upload_photo(request: Request, order_id: int, photo_type: str = Form(...), f
     # произвольного файла (path traversal).
     field = PHOTO_TYPE_FIELDS.get(photo_type)
     if not field:
-        return HTMLResponse("<h2>Ошибка: Недопустимый тип фото.</h2>")
+        return error_redirect(f"/order/{order_id}", "Недопустимый тип фото.")
 
     order = get_in_branch_or_none(db, Order, order_id, user)
     if order and file and file.filename:
         try:
             photo_url = save_order_photo(file, f"order_{order_id}_{photo_type}.jpg")
         except InvalidImageError as e:
-            return HTMLResponse(f"<h2>Ошибка: {e}</h2>")
+            return error_redirect(f"/order/{order_id}", str(e))
         setattr(order, field, photo_url)
         db.commit()
     return RedirectResponse(url=f"/order/{order_id}", status_code=303)
@@ -475,7 +479,7 @@ def update_order_comment(request: Request, order_id: int, comment_type: str = Fo
         elif comment_type == "colorist" and user_has_role(user, "колорист"):
             order.colorist_comment = comment_text
         else:
-            return HTMLResponse("<h2>Ошибка: Недостаточно прав для этого комментария.</h2>")
+            return error_redirect(f"/order/{order_id}", "Недостаточно прав для этого комментария.")
         db.commit()
     return RedirectResponse(url=f"/order/{order_id}", status_code=303)
 
@@ -527,13 +531,13 @@ def create_client(request: Request, client_name: str = Form(...), branch_id: int
     if not user_has_role(manager, "менеджер"):
         return RedirectResponse(url="/clients", status_code=303)
     if not manager.branch_id:
-        return HTMLResponse("<h2>Ошибка: Нет привязки к филиалу!</h2>")
+        return error_redirect("/new-client", "Нет привязки к филиалу!")
     if branch_id != manager.branch_id:
-        return HTMLResponse("<h2>Ошибка: Нельзя добавить клиента в чужой филиал!</h2>")
+        return error_redirect("/new-client", "Нельзя добавить клиента в чужой филиал!")
 
     clean_name = client_name.strip()
     if not clean_name:
-        return HTMLResponse("<h2>Ошибка: Укажите имя клиента!</h2>")
+        return error_redirect("/new-client", "Укажите имя клиента!")
 
     existing = db.query(Client).filter(Client.name == clean_name, Client.branch_id == manager.branch_id).first()
     if existing:

@@ -1,7 +1,7 @@
 import io
 
 from models import Shift
-from tests.factories import make_branch, make_user, make_client, make_order, login_session
+from tests.factories import make_branch, make_user, make_client, make_order, login_session, error_text
 
 
 def _fake_photo():
@@ -87,8 +87,7 @@ def test_shift_start_rejects_non_image_file(client, db_session):
     bad_file = io.BytesIO(b"this is not an image")
     resp = client.post("/shift/start", files=[("photos", ("not_a_photo.jpg", bad_file, "image/jpeg"))])
 
-    assert resp.status_code == 200
-    assert "Ошибка" in resp.text
+    assert "не является изображением" in error_text(resp)
     assert db_session.query(Shift).filter(Shift.user_id == colorist.id).count() == 0
 
 
@@ -147,4 +146,4 @@ def test_new_order_blocked_without_active_manager_shift(client, db_session):
         "client_name": "Клиент", "car": "Kia", "detail": "Крыло",
         "service_type": "Слив по коду", "target_volume": "100", "deadline": "2026-12-31",
     })
-    assert "Сначала начните смену" in resp.text
+    assert "Сначала начните смену" in error_text(resp)

@@ -1,7 +1,7 @@
 import secrets
 from typing import Optional
 from fastapi import APIRouter, Request, Form, Depends
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy import and_, case, func, not_
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from models import Order, User, Branch, Shift, Client, UserSession
 from utils import (
     templates, require_director, require_director_page, parse_photo_list, paginate_query,
     scope_query_to_branch, parse_optional_id, apply_date_range_filter, CANCELLED_STATUS,
+    error_redirect,
 )
 
 router = APIRouter(prefix="/director")
@@ -191,9 +192,9 @@ def add_user(request: Request, username_new: str = Form(...), role: str = Form(.
     # здесь, и случайный пробел в конце сделает учётку нерабочей с виду верным токеном.
     clean_username = username_new.strip()
     if db.query(User).filter(User.username == clean_username).first():
-        return HTMLResponse("Ошибка: Пользователь с таким логином уже существует.")
+        return error_redirect("/director/users", "Пользователь с таким логином уже существует.")
     if role not in ALLOWED_USER_ROLES:
-        return HTMLResponse("Ошибка: Недопустимая роль.")
+        return error_redirect("/director/users", "Недопустимая роль.")
 
     employee_token = secrets.token_hex(16)
     db.add(User(username=clean_username, password_hash=None, role=role, branch_id=branch_id, token=employee_token))
@@ -215,7 +216,7 @@ def delete_user(request: Request, user_id: int, db: Session = Depends(get_db),
     target_user = db.query(User).filter(User.id == user_id).first()
     if target_user:
         if target_user.id == current_user.id:
-            return HTMLResponse("Ошибка: Нельзя удалить собственную учетную запись.")
+            return error_redirect("/director/users", "Нельзя удалить собственную учетную запись.")
 
         # Отвязываем колориста/менеджера от старых заказов — иначе delete упадёт по FK
         # (manager_id/colorist_id не имеют ON DELETE, а сами заказы удалять нельзя).

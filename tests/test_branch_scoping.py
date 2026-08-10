@@ -1,6 +1,6 @@
 """Регрессионные тесты на изоляцию данных между филиалами (scope_query_to_branch)."""
 from models import Client as ClientModel
-from tests.factories import make_branch, make_user, make_client, make_order, login_session
+from tests.factories import make_branch, make_user, make_client, make_order, login_session, error_text
 
 
 def test_manager_sees_only_own_branch_clients(client, db_session):
@@ -122,7 +122,7 @@ def test_colorist_cannot_write_manager_comment(client, db_session):
     resp = client.post(f"/order/{order_a.id}/comment",
                        data={"comment_type": "manager", "comment_text": "чужой комментарий"})
 
-    assert "Ошибка" in resp.text
+    assert "Недостаточно прав" in error_text(resp)
     db_session.refresh(order_a)
     assert order_a.manager_comment is None
 
@@ -135,7 +135,7 @@ def test_manager_cannot_create_client_for_another_branch(client, db_session):
 
     resp = client.post("/new-client", data={"client_name": "Чужой клиент", "branch_id": branch_b.id})
 
-    assert "Ошибка" in resp.text
+    assert "чужой филиал" in error_text(resp)
     assert db_session.query(ClientModel).filter(ClientModel.name == "Чужой клиент").first() is None
 
 

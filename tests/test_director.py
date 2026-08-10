@@ -1,7 +1,7 @@
 """Регрессионные тесты на директорские роуты: авторизация, безопасное удаление."""
 from models import Branch, Shift, User
 from routers.director import _apply_shift_filters
-from tests.factories import make_branch, make_user, make_client, make_order, login_session
+from tests.factories import make_branch, make_user, make_client, make_order, login_session, error_text
 from utils import utc_now
 
 
@@ -67,7 +67,7 @@ def test_add_user_rejects_invalid_role(client, db_session):
         "username_new": "hacker", "role": "SuperAdmin", "branch_id": branch.id,
     })
 
-    assert "Ошибка" in resp.text
+    assert "Недопустимая роль" in error_text(resp)
     assert db_session.query(User).filter(User.username == "hacker").first() is None
 
 
