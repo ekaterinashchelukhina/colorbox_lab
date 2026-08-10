@@ -132,10 +132,12 @@
                 {% else %}
                     <div style="height: 180px; background: #ecf0f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #95a5a6; margin-bottom: 10px; border: 2px dashed #bdc3c7; font-size: 13px;">Фото не загружено</div>
                 {% endif %}
-                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" class="upload-form-row">
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="detail" />
-                    <input type="file" name="file" accept="image/*" capture="environment" required class="upload-file-input" />
-                    <button type="submit" style="background: #95a5a6; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Загрузить</button>
+                    <label class="upload-zone">
+                        <span>📸 Сделать фото / выбрать файл</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
+                    </label>
                 </form>
             </div>
             {% endif %}
@@ -150,10 +152,12 @@
                 {% else %}
                     <div style="height: 180px; background: #fff3e0; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #e67e22; margin-bottom: 10px; border: 2px dashed #ffb74d; font-size: 13px;">Ждем колориста</div>
                 {% endif %}
-                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" class="upload-form-row">
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="scales" />
-                    <input type="file" name="file" accept="image/*" capture="environment" required class="upload-file-input" />
-                    <button type="submit" style="background: #e67e22; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Загрузить</button>
+                    <label class="upload-zone">
+                        <span>📸 Сделать фото / выбрать файл</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
+                    </label>
                 </form>
             </div>
 
@@ -166,10 +170,12 @@
                 {% else %}
                     <div style="height: 180px; background: #e0f2f1; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #1abc9c; margin-bottom: 10px; border: 2px dashed #80cbc4; font-size: 13px;">Ждем колориста</div>
                 {% endif %}
-                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" class="upload-form-row">
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="after" />
-                    <input type="file" name="file" accept="image/*" capture="environment" required class="upload-file-input" />
-                    <button type="submit" style="background: #1abc9c; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Загрузить</button>
+                    <label class="upload-zone">
+                        <span>📸 Сделать фото / выбрать файл</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
+                    </label>
                 </form>
             </div>
             {% endif %}
@@ -183,10 +189,12 @@
                 {% else %}
                     <div style="height: 180px; background: #eaf2fb; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #5d8fc2; margin-bottom: 10px; border: 2px dashed #aecbe8; font-size: 13px;">Ждем колориста</div>
                 {% endif %}
-                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" class="upload-form-row">
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="recipe" />
-                    <input type="file" name="file" accept="image/*" capture="environment" {% if requires_full_photo_set %}required{% endif %} class="upload-file-input" />
-                    <button type="submit" style="background: #3498db; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px;">Загрузить</button>
+                    <label class="upload-zone">
+                        <span>📸 Сделать фото / выбрать файл</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" {% if requires_full_photo_set %}required{% endif %} onchange="this.form.submit()" />
+                    </label>
                 </form>
             </div>
             {% endif %}
@@ -207,10 +215,12 @@
                 {% else %}
                     <div class="photo-placeholder-rework">Ждём колориста</div>
                 {% endif %}
-                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" class="upload-form-row">
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="rework_scales" />
-                    <input type="file" name="file" accept="image/*" capture="environment" required class="upload-file-input" />
-                    <button type="submit" class="btn-upload-rework">Загрузить</button>
+                    <label class="upload-zone">
+                        <span>📸 Сделать фото / выбрать файл</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
+                    </label>
                 </form>
             </div>
 
@@ -221,10 +231,12 @@
                 {% else %}
                     <div class="photo-placeholder-rework">Ждём колориста</div>
                 {% endif %}
-                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" class="upload-form-row">
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="rework_after" />
-                    <input type="file" name="file" accept="image/*" capture="environment" required class="upload-file-input" />
-                    <button type="submit" class="btn-upload-rework">Загрузить</button>
+                    <label class="upload-zone">
+                        <span>📸 Сделать фото / выбрать файл</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
+                    </label>
                 </form>
             </div>
 
@@ -235,10 +247,12 @@
                 {% else %}
                     <div class="photo-placeholder-rework">Ждём колориста</div>
                 {% endif %}
-                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data" class="upload-form-row">
+                <form action="/order/{{ order.id }}/upload" method="post" enctype="multipart/form-data">
                     <input type="hidden" name="photo_type" value="rework_test" />
-                    <input type="file" name="file" accept="image/*" capture="environment" required class="upload-file-input" />
-                    <button type="submit" class="btn-upload-rework">Загрузить</button>
+                    <label class="upload-zone">
+                        <span>📸 Сделать фото / выбрать файл</span>
+                        <input type="file" name="file" accept="image/*" capture="environment" required onchange="this.form.submit()" />
+                    </label>
                 </form>
             </div>
         </div>
