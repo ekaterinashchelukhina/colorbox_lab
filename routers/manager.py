@@ -275,7 +275,11 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
 @router.post("/order/{order_id}/rework")
 def send_order_to_rework(request: Request, order_id: int, db: Session = Depends(get_db),
                          user: User = Depends(require_login)):
-    """Возвращает выданный заказ в очередь колориста на доколеровку."""
+    """Возвращает выданный заказ в очередь колориста на доколеровку. Право есть только
+    у менеджера — как и у /order/{id}/cancel, ни у директора, ни у колориста."""
+    if not user_has_role(user, "менеджер"):
+        return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+
     order = get_in_branch_or_none(db, Order, order_id, user)
     if order and order.status == "Выдано":
         order.status = "В очереди"
@@ -440,6 +444,6 @@ def view_client(request: Request, client_id: int, date_from: Optional[str] = Non
     orders = query.order_by(Order.created_at.desc()).all()
 
     return templates.TemplateResponse(request=request, name="client_detail.html", context={
-        "client": client, "orders": orders, "service_types": SERVICE_TYPES,
+        "client": client, "orders": orders, "service_types": SERVICE_TYPES, "role": display_role(user),
         "filters": {"date_from": date_from or "", "date_to": date_to or "", "service_type": service_type or ""}
     })

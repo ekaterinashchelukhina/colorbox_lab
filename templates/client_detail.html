@@ -74,7 +74,7 @@
                         {% endif %}
                     </td>
                     <td class="p-4 text-center">
-                        {% if order.status == "Выдано" %}
+                        {% if order.status == "Выдано" and role == "Менеджер" %}
                         <form action="/order/{{ order.id }}/rework" method="post" onsubmit="return confirm('Отправить заказ на доколеровку? Заказ вернётся в очередь колориста.');">
                             <button type="submit" class="bg-[#8e44ad] hover:bg-[#7d3c98] text-white px-3 py-1.5 rounded-md font-bold text-xs transition-colors">🎨 Доколеровка</button>
                         </form>
@@ -116,7 +116,7 @@
                 <span>{% if order.created_at %}<span class="local-time" data-format="date" data-utc="{{ order.created_at.isoformat() }}">{{ order.created_at.strftime('%d.%m.%Y') }}</span>{% else %}—{% endif %}</span>
             </div>
 
-            {% if order.status == "Выдано" %}
+            {% if order.status == "Выдано" and role == "Менеджер" %}
             <form action="/order/{{ order.id }}/rework" method="post" onsubmit="return confirm('Отправить заказ на доколеровку? Заказ вернётся в очередь колориста.');" class="border-t border-[#ecf0f1] pt-3">
                 <button type="submit" class="w-full bg-[#8e44ad] hover:bg-[#7d3c98] text-white px-4 py-2 rounded-lg font-bold text-sm transition-colors">🎨 Отправить на доколеровку</button>
             </form>

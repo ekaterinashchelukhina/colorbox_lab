@@ -135,3 +135,31 @@ def test_rework_resets_fields(client, db_session):
     assert order.rework_count == 1
     assert order.rework_photo_scales is None
     assert order.issued_at is None
+
+
+def test_director_cannot_send_order_to_rework(client, db_session):
+    branch = make_branch(db_session)
+    director = make_user(db_session, role="Директор", branch=None)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="Выдано", rework_count=0)
+    login_session(db_session, client, director)
+
+    client.post(f"/order/{order.id}/rework")
+
+    db_session.refresh(order)
+    assert order.status == "Выдано"
+    assert order.rework_count == 0
+
+
+def test_colorist_cannot_send_order_to_rework(client, db_session):
+    branch = make_branch(db_session)
+    colorist = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="Выдано", rework_count=0)
+    login_session(db_session, client, colorist)
+
+    client.post(f"/order/{order.id}/rework")
+
+    db_session.refresh(order)
+    assert order.status == "Выдано"
+    assert order.rework_count == 0
