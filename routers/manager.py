@@ -225,13 +225,18 @@ def view_order(request: Request, order_id: int, db: Session = Depends(get_db),
     if not order:
         return RedirectResponse(url="/dashboard", status_code=303)
 
+    context = {"order": order}
     if user_has_role(user, "колорист"):
         template_name = "colorist_order.html"
     elif user_has_role(user, "директор"):
         template_name = "director_order_detail.html"
     else:
         template_name = "order_detail.html"
-    return templates.TemplateResponse(request=request, name=template_name, context={"order": order})
+        # Список колористов филиала — для формы "передать другому колористу"
+        context["colorists"] = db.query(User).filter(
+            User.role == "Колорист", User.branch_id == order.branch_id
+        ).order_by(User.username).all()
+    return templates.TemplateResponse(request=request, name=template_name, context=context)
 
 
 def _missing_completion_photo(order: Order, new_status: str, is_rework_cycle: bool) -> Optional[str]:
@@ -271,6 +276,12 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
     order = get_in_branch_or_none(db, Order, order_id, user)
     if order:
         if user_has_role(user, "колорист"):
+            # Заказ уже закреплён за другим колористом (взят в работу или вернулся из
+            # доколеровки — colorist_id при отправке на доколеровку не сбрасывается) —
+            # чужой колорист не должен иметь возможность перехватить его себе через эту
+            # форму. Переназначить может только менеджер через /reassign-colorist.
+            if order.colorist_id is not None and order.colorist_id != user.id:
+                return HTMLResponse("<h2>Ошибка: Этот заказ закреплён за другим колористом.</h2>")
             order.colorist_id = user.id
 
         # Заказ находится в активном цикле доколеровки, пока не сдан снова
@@ -293,6 +304,30 @@ def update_order_status(request: Request, order_id: int, new_status: str = Form(
         db.commit()
 
     return RedirectResponse(url="/colorist" if new_status == "Готово" else f"/order/{order_id}", status_code=303)
+
+
+@router.post("/order/{order_id}/reassign-colorist")
+def reassign_colorist(request: Request, order_id: int, colorist_id: int = Form(...),
+                      db: Session = Depends(get_db), user: User = Depends(require_login)):
+    """Передаёт заказ другому колористу — единственный способ снять с заказа
+    закрепление за прежним колористом (см. проверку в update_order_status)."""
+    if not user_has_role(user, "менеджер"):
+        return RedirectResponse(url=f"/order/{order_id}", status_code=303)
+
+    order = get_in_branch_or_none(db, Order, order_id, user)
+    if not order:
+        return RedirectResponse(url="/dashboard", status_code=303)
+
+    # Новый колорист обязан быть колористом того же филиала, что и заказ — иначе
+    # можно было бы передать заказ сотруднику, который его физически не увидит
+    # в своей очереди (она отфильтрована по branch_id).
+    new_colorist = db.query(User).filter(
+        User.id == colorist_id, User.role == "Колорист", User.branch_id == order.branch_id
+    ).first()
+    if new_colorist:
+        order.colorist_id = new_colorist.id
+        db.commit()
+    return RedirectResponse(url=f"/order/{order_id}", status_code=303)
 
 
 @router.post("/order/{order_id}/rework")

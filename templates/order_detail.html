@@ -49,6 +49,24 @@
             {% if order.actual_volume %}
             <p class="actual-volume-value"><strong>Фактический объем:</strong> {{ order.actual_volume }} г</p>
             {% endif %}
+
+            <p class="field-row" style="margin-top: 15px; border-top: 1px dashed #ddd; padding-top: 10px;">
+                <strong>Колорист:</strong>
+                {% if order.colorist %}{{ order.colorist.username }}
+                {% elif order.colorist_deleted_name %}{{ order.colorist_deleted_name }} (удалён)
+                {% else %}Ожидает колориста{% endif %}
+            </p>
+
+            {% if order.colorist and order.status in ["В очереди", "В работе"] and colorists|length > 1 %}
+            <form action="/order/{{ order.id }}/reassign-colorist" method="post" style="display: flex; gap: 8px; margin-top: 8px;">
+                <select name="colorist_id" style="flex: 1; padding: 7px 10px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; background: white;">
+                    {% for c in colorists %}
+                    <option value="{{ c.id }}" {% if order.colorist and c.id == order.colorist.id %}selected{% endif %}>{{ c.username }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn-action btn-action-blue">Передать</button>
+            </form>
+            {% endif %}
         </div>
 
         <div class="detail-side-column">

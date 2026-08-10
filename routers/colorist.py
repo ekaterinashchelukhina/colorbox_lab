@@ -3,6 +3,7 @@ from typing import List
 
 from fastapi import APIRouter, Request, Depends, UploadFile, File
 from fastapi.responses import RedirectResponse, HTMLResponse
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -28,7 +29,17 @@ def colorist_dashboard(request: Request, db: Session = Depends(get_db)):
     if active_shift:
         orders = db.query(Order).filter(
             Order.branch_id == user.branch_id,
-            Order.status.in_(["В очереди", "В работе"])
+            Order.status.in_(["В очереди", "В работе"]),
+            # Свежий заказ (colorist_id ещё не назначен) виден всем колористам филиала —
+            # это обычная общая очередь. А вот заказ, вернувшийся из доколеровки, уже
+            # знает своего колориста (colorist_id остаётся с прошлого цикла работы,
+            # send_order_to_rework его не сбрасывает) — такой заказ должен попадать
+            # в очередь именно этого колориста, а не любого, кто первым откроет /colorist.
+            or_(
+                Order.status != "В очереди",
+                Order.colorist_id.is_(None),
+                Order.colorist_id == user.id,
+            ),
         ).order_by(
             Order.is_express.desc(), Order.rework_count.desc(), Order.created_at.asc()
         ).all()

@@ -197,3 +197,74 @@ def test_director_cannot_upload_order_photo(client, db_session):
     assert resp.status_code == 303
     db_session.refresh(order)
     assert order.photo_scales is None
+
+
+def test_other_colorist_cannot_take_over_assigned_order(client, db_session):
+    branch = make_branch(db_session)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди",
+                       rework_count=1, colorist_id=colorist_a.id, service_type="Слив по коду")
+    login_session(db_session, client, colorist_b)
+
+    resp = client.post(f"/order/{order.id}/status", data={"new_status": "В работе"})
+
+    assert "закреплён за другим колористом" in resp.text
+    db_session.refresh(order)
+    assert order.status == "В очереди"
+    assert order.colorist_id == colorist_a.id
+
+
+def test_manager_can_reassign_order_to_another_colorist(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди",
+                       rework_count=1, colorist_id=colorist_a.id, service_type="Слив по коду")
+    login_session(db_session, client, manager)
+
+    resp = client.post(f"/order/{order.id}/reassign-colorist",
+                       data={"colorist_id": colorist_b.id}, follow_redirects=False)
+
+    assert resp.status_code == 303
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_b.id
+
+    # После передачи colorist_b может сам взять заказ в работу, colorist_a — уже нет
+    login_session(db_session, client, colorist_b)
+    resp = client.post(f"/order/{order.id}/status", data={"new_status": "В работе"})
+    db_session.refresh(order)
+    assert order.status == "В работе"
+
+
+def test_reassign_colorist_blocked_for_non_manager(client, db_session):
+    branch = make_branch(db_session)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    order = make_order(db_session, branch, client_obj, status="В очереди", colorist_id=colorist_a.id)
+    login_session(db_session, client, colorist_a)
+
+    client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_a.id
+
+
+def test_reassign_colorist_rejects_colorist_from_another_branch(client, db_session):
+    branch_a = make_branch(db_session, "Филиал А")
+    branch_b = make_branch(db_session, "Филиал Б")
+    manager_a = make_user(db_session, role="Менеджер", branch=branch_a)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch_a)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch_b)
+    client_obj = make_client(db_session, branch_a)
+    order = make_order(db_session, branch_a, client_obj, status="В очереди", colorist_id=colorist_a.id)
+    login_session(db_session, client, manager_a)
+
+    client.post(f"/order/{order.id}/reassign-colorist", data={"colorist_id": colorist_b.id})
+
+    db_session.refresh(order)
+    assert order.colorist_id == colorist_a.id

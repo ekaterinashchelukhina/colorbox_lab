@@ -1,7 +1,7 @@
 import io
 
 from models import Shift
-from tests.factories import make_branch, make_user, login_session
+from tests.factories import make_branch, make_user, make_client, make_order, login_session
 
 
 def _fake_photo():
@@ -99,6 +99,40 @@ def test_colorist_dashboard_has_single_logout_button(client, db_session):
     resp = client.get("/colorist")
 
     assert resp.text.count('href="/logout"') == 1
+
+
+def test_rework_order_visible_only_to_original_colorist(client, db_session):
+    branch = make_branch(db_session)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch, username="colorist_a")
+    colorist_b = make_user(db_session, role="Колорист", branch=branch, username="colorist_b")
+    client_obj = make_client(db_session, branch)
+    # Заказ вернулся из доколеровки: colorist_id остался с прошлого цикла работы,
+    # статус — снова "В очереди" (см. send_order_to_rework).
+    order = make_order(db_session, branch, client_obj, status="В очереди",
+                       rework_count=1, colorist_id=colorist_a.id, paint_code="REWORK-1")
+
+    login_session(db_session, client, colorist_a)
+    client.post("/shift/start", files=_photo_files())
+    resp_a = client.get("/colorist")
+    assert "REWORK-1" in resp_a.text
+
+    login_session(db_session, client, colorist_b)
+    client.post("/shift/start", files=_photo_files())
+    resp_b = client.get("/colorist")
+    assert "REWORK-1" not in resp_b.text
+
+
+def test_unclaimed_order_visible_to_any_colorist_on_shift(client, db_session):
+    branch = make_branch(db_session)
+    colorist = make_user(db_session, role="Колорист", branch=branch)
+    client_obj = make_client(db_session, branch)
+    make_order(db_session, branch, client_obj, status="В очереди", paint_code="FRESH-1")
+
+    login_session(db_session, client, colorist)
+    client.post("/shift/start", files=_photo_files())
+    resp = client.get("/colorist")
+
+    assert "FRESH-1" in resp.text
 
 
 def test_new_order_blocked_without_active_manager_shift(client, db_session):
