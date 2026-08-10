@@ -93,15 +93,6 @@
                         {% endif %}
                     </div>
                 </div>
-                {% if order.pending_colorist_id == viewer_id %}
-                <a href="/order/{{ order.id }}" class="block mb-3 -mt-1 text-xs font-bold text-[#2c6fad] bg-[#eaf2fb] px-3 py-2 rounded-lg">
-                    🔄 Вам предлагают этот заказ — нужен ваш ответ
-                </a>
-                {% elif order.colorist_id == viewer_id and order.pending_colorist_id %}
-                <a href="/order/{{ order.id }}" class="block mb-3 -mt-1 text-xs font-bold text-[#8a6a06] bg-[#fdf3d9] px-3 py-2 rounded-lg">
-                    🔄 Заказ предложен другому колористу — нужен ваш ответ
-                </a>
-                {% endif %}
                 <div class="flex flex-col gap-1 mb-4 pl-2 text-sm">
                     <p class="m-0 text-[#2c3e50]"><strong>Клиент:</strong> {{ order.client.name if order.client else 'Не указан' }}</p>
                     <p class="m-0 text-[#2c3e50]"><strong>Автомобиль:</strong> {{ order.car }} (<span class="text-[#7f8c8d]">{{ order.detail }}</span>)</p>
