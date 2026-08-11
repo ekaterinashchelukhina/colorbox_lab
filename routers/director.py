@@ -61,17 +61,35 @@ def _director_dashboard_stats(db: Session, user: User, branch_id: Optional[str])
     orders = query.all()
     shifts = shifts_query.all()
 
-    total_revenue = db.query(func.sum(Order.price)).filter(
-        *branch_filter, Order.price.isnot(None), Order.price != 0,
-        (Order.is_paid == True) | (Order.status == "Выдано")
-    ).scalar() or 0.0
-
+    # Выручка/объём/доколеровки считаются по более широкому набору заказов, чем
+    # активный список выше (выручка, например, обязана учитывать уже выданные и
+    # оплаченные заказы, которых нет в "active" query) — поэтому просуммировать их
+    # в Python по уже загруженному orders нельзя, набор строк не совпадает. Но все
+    # три суммы можно посчитать одним запросом с несколькими агрегатами вместо трёх
+    # отдельных походов в базу — итог тот же, круговых обращений меньше.
     volume_expr = func.coalesce(Order.actual_volume, Order.target_volume, 0.0)
     normalized_volume = case((volume_expr > 10, volume_expr / 1000.0), else_=volume_expr)
-    total_paint_volume = db.query(func.sum(normalized_volume)).filter(*branch_filter).scalar() or 0.0
+    revenue_expr = func.sum(case(
+        (
+            and_(
+                Order.price.isnot(None), Order.price != 0,
+                (Order.is_paid == True) | (Order.status == "Выдано"),
+            ),
+            Order.price,
+        ),
+        else_=0.0,
+    ))
 
-    # Накопительный счётчик: все доколеровки, включая уже сданные — не сбрасывается после выдачи
-    total_reworks = db.query(func.sum(Order.rework_count)).filter(*branch_filter).scalar() or 0
+    total_revenue, total_paint_volume, total_reworks = db.query(
+        revenue_expr,
+        func.sum(normalized_volume),
+        # Накопительный счётчик: все доколеровки, включая уже сданные — не сбрасывается после выдачи
+        func.sum(Order.rework_count),
+    ).filter(*branch_filter).first()
+    total_revenue = total_revenue or 0.0
+    total_paint_volume = total_paint_volume or 0.0
+    total_reworks = total_reworks or 0
+
     active_orders = len([o for o in orders if o.status not in ["Готово", "Выдано"]])
 
     return {

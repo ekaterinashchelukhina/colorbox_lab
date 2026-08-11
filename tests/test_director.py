@@ -5,6 +5,36 @@ from tests.factories import make_branch, make_user, make_client, make_order, log
 from utils import utc_now
 
 
+def test_dashboard_stats_aggregate_correctly_in_one_query(client, db_session):
+    """Выручка/объём/доколеровки считаются одним объединённым запросом (раньше — тремя
+    отдельными), но по тому же более широкому набору заказов, что и раньше — включая
+    заказы, которых нет в активном списке (уже выданные/оплаченные, отменённые)."""
+    branch = make_branch(db_session)
+    director = make_user(db_session, role="Директор", branch=None)
+    client_obj = make_client(db_session, branch)
+
+    # Выдан и оплачен — есть в выручке/объёме/доколеровках, но не в активном списке.
+    make_order(db_session, branch, client_obj, status="Выдано", is_paid=True,
+               price=1000.0, actual_volume=2000.0, rework_count=1)
+    # Не оплачен и не выдан — цена НЕ считается в выручке (условие не выполняется),
+    # а объём и доколеровки всё равно учитываются.
+    make_order(db_session, branch, client_obj, status="В работе", is_paid=False,
+               price=500.0, target_volume=8.0, rework_count=0)
+    # Отменён — вне активного списка, но выручка/объём/доколеровки всё равно считают
+    # его (is_paid=True), как и до объединения запросов в один.
+    make_order(db_session, branch, client_obj, status="Отменен", is_paid=True,
+               price=300.0, target_volume=40.0, rework_count=3)
+
+    login_session(db_session, client, director)
+    resp = client.get(f"/director/stats?branch_id={branch.id}")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_revenue"] == 1300.0
+    assert data["total_paint_volume"] == 10.0
+    assert data["total_reworks"] == 4
+
+
 def test_delete_user_with_orders_does_not_crash(client, db_session):
     branch = make_branch(db_session)
     director = make_user(db_session, role="Директор", branch=None)
