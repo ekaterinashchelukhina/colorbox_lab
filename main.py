@@ -12,7 +12,8 @@ from sqlalchemy.orm import Session
 # Импорты базы данных и утилит
 from database import get_db, sync_schema
 from models import User, Order, Shift, UserSession
-from utils import templates, RedirectException, require_login, utc_now, user_has_role, CANCELLED_STATUS
+from utils import (templates, RedirectException, require_login, utc_now, user_has_role, CANCELLED_STATUS,
+                    hash_token, verify_token, LOGIN_MAX_ATTEMPTS, LOGIN_LOCKOUT)
 from storage import UPLOAD_DIR
 
 SESSION_LIFETIME = timedelta(days=30)
@@ -102,10 +103,42 @@ def read_root(request: Request):
 def login(request: Request, username: str = Form(...), token: str = Form(...), db: Session = Depends(get_db)):
     clean_username = username.strip()
     clean_token = token.strip()
-    user = db.query(User).filter(User.username == clean_username, User.token == clean_token).first()
+    error_response = templates.TemplateResponse(
+        request=request, name="login.html", context={"error_message": "Неверный логин или токен доступа"})
 
+    user = db.query(User).filter(User.username == clean_username).first()
     if not user:
-        return templates.TemplateResponse(request=request, name="login.html", context={"error_message": "Неверный логин или токен доступа"})
+        return error_response
+
+    if user.locked_until and user.locked_until > utc_now():
+        return templates.TemplateResponse(
+            request=request, name="login.html",
+            context={"error_message": "Слишком много неудачных попыток входа. Попробуйте снова через 15 минут."})
+
+    # token_hash — новая схема (хэш). token — переходное поле для сотрудников, чей
+    # токен ещё не был хэширован (заведены до этого изменения); совпадение с ним
+    # тоже засчитывается как успешный вход, но сразу же "докручивается" до hash —
+    # см. апгрейд ниже. Так все существующие токены переходят на хэш сами по себе,
+    # по мере входа сотрудников, без отдельной миграции данных.
+    token_valid = (
+        (user.token_hash is not None and verify_token(clean_token, user.token_hash))
+        or (user.token is not None and user.token == clean_token)
+    )
+
+    if not token_valid:
+        user.failed_login_attempts += 1
+        if user.failed_login_attempts >= LOGIN_MAX_ATTEMPTS:
+            user.locked_until = utc_now() + LOGIN_LOCKOUT
+            user.failed_login_attempts = 0
+        db.commit()
+        return error_response
+
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    if user.token is not None:
+        user.token_hash = hash_token(clean_token)
+        user.token = None
+    db.commit()
 
     if user_has_role(user, "директор"):
         redirect_url = "/director"

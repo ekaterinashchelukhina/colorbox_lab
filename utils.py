@@ -1,10 +1,11 @@
 import ast
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from io import BytesIO
 from typing import List, Optional
 from urllib.parse import quote
+from passlib.context import CryptContext
 from PIL import Image, UnidentifiedImageError
 from fastapi import Request, Depends, UploadFile
 from fastapi.responses import RedirectResponse
@@ -14,6 +15,23 @@ from sqlalchemy.orm import Session
 from database import get_db, utc_now
 from models import User, UserSession
 from storage import storage
+
+# Хэширование постоянного логин-токена сотрудника (main.py/routers/director.py) —
+# bcrypt, тот же принцип, что для паролей: в базе не должно быть значения,
+# по которому можно восстановить исходный токен при утечке.
+_token_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Защита от подбора токена на /login — см. models.py (User.failed_login_attempts/locked_until).
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_LOCKOUT = timedelta(minutes=15)
+
+
+def hash_token(token: str) -> str:
+    return _token_context.hash(token)
+
+
+def verify_token(token: str, token_hash: str) -> bool:
+    return _token_context.verify(token, token_hash)
 
 # С запасом под фото с телефона до сжатия (после сжатия — единицы сотен КБ). Проверяется
 # до PIL, чтобы гигантский файл не тратил память/CPU на попытку его распаковать.

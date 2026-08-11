@@ -26,6 +26,10 @@
     <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm">
         <div class="text-red-800 font-bold">Сотрудник удален.</div>
     </div>
+    {% elif request.query_params.get('success') == 'logout_everywhere' %}
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm">
+        <div class="text-blue-800 font-bold">Сотрудник разлогинен на всех устройствах.</div>
+    </div>
     {% endif %}
 
     <!-- Форма создания нового сотрудника -->
@@ -96,9 +100,14 @@
                         {% if user.username == current_username %}
                             <span class="text-xs text-[#7f8c8d] font-bold">Текущий аккаунт</span>
                         {% else %}
-                            <form action="/director/user/delete/{{ user.id }}" method="post" onsubmit="return confirm('Вы уверены, что хотите удалить сотрудника {{ user.username }}? Он больше не сможет войти в систему.');">
-                                <button type="submit" class="text-[#e74c3c] hover:text-[#c0392b] font-bold text-sm transition-colors">Удалить</button>
-                            </form>
+                            <div class="flex flex-col items-center gap-1">
+                                <form action="/director/user/logout-everywhere/{{ user.id }}" method="post" onsubmit="return confirm('Разлогинить {{ user.username }} на всех устройствах? Токен для входа не изменится, при следующем входе сессия выдастся заново.');">
+                                    <button type="submit" class="text-[#2980b9] hover:text-[#1f618d] font-bold text-sm transition-colors">Разлогинить</button>
+                                </form>
+                                <form action="/director/user/delete/{{ user.id }}" method="post" onsubmit="return confirm('Вы уверены, что хотите удалить сотрудника {{ user.username }}? Он больше не сможет войти в систему.');">
+                                    <button type="submit" class="text-[#e74c3c] hover:text-[#c0392b] font-bold text-sm transition-colors">Удалить</button>
+                                </form>
+                            </div>
                         {% endif %}
                     </td>
                 </tr>
@@ -135,11 +144,18 @@
                 {% if user.username == current_username %}
                     <span class="text-xs text-[#7f8c8d] font-bold bg-gray-100 px-3 py-1.5 rounded-lg">Это вы (текущий аккаунт)</span>
                 {% else %}
-                    <form action="/director/user/delete/{{ user.id }}" method="post" onsubmit="return confirm('Вы уверены, что хотите удалить сотрудника {{ user.username }}?');">
-                        <button type="submit" class="bg-red-50 text-[#e74c3c] hover:bg-red-100 px-4 py-2 rounded-lg font-bold text-sm transition-colors border border-red-100">
-                            Удалить сотрудника
-                        </button>
-                    </form>
+                    <div class="flex gap-2">
+                        <form action="/director/user/logout-everywhere/{{ user.id }}" method="post" onsubmit="return confirm('Разлогинить {{ user.username }} на всех устройствах?');">
+                            <button type="submit" class="bg-blue-50 text-[#2980b9] hover:bg-blue-100 px-4 py-2 rounded-lg font-bold text-sm transition-colors border border-blue-100">
+                                Разлогинить
+                            </button>
+                        </form>
+                        <form action="/director/user/delete/{{ user.id }}" method="post" onsubmit="return confirm('Вы уверены, что хотите удалить сотрудника {{ user.username }}?');">
+                            <button type="submit" class="bg-red-50 text-[#e74c3c] hover:bg-red-100 px-4 py-2 rounded-lg font-bold text-sm transition-colors border border-red-100">
+                                Удалить сотрудника
+                            </button>
+                        </form>
+                    </div>
                 {% endif %}
             </div>
 

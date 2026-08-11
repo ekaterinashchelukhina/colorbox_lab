@@ -10,7 +10,7 @@ from models import Order, User, Branch, Shift, Client, UserSession
 from utils import (
     templates, require_director, require_director_page, parse_photo_list, paginate_query,
     scope_query_to_branch, parse_optional_id, apply_date_range_filter, CANCELLED_STATUS,
-    error_redirect,
+    error_redirect, hash_token,
 )
 
 router = APIRouter(prefix="/director")
@@ -196,8 +196,11 @@ def add_user(request: Request, username_new: str = Form(...), role: str = Form(.
     if role not in ALLOWED_USER_ROLES:
         return error_redirect("/director/users", "Недопустимая роль.")
 
+    # Токен показывается сотруднику/директору один раз (флеш-кука ниже) и в базе
+    # хранится только хэшированным (token_hash) — см. models.py.
     employee_token = secrets.token_hex(16)
-    db.add(User(username=clean_username, password_hash=None, role=role, branch_id=branch_id, token=employee_token))
+    db.add(User(username=clean_username, password_hash=None, role=role, branch_id=branch_id,
+                token_hash=hash_token(employee_token)))
     db.commit()
 
     # Токен — секрет (это единственный "пароль" сотрудника), поэтому не кладём его
@@ -208,6 +211,18 @@ def add_user(request: Request, username_new: str = Form(...), role: str = Form(.
     response.set_cookie(key="flash_new_token", value=employee_token, max_age=60,
                         httponly=True, samesite="lax", secure=request.url.scheme == "https")
     return response
+
+
+@router.post("/user/logout-everywhere/{user_id}")
+def logout_everywhere(request: Request, user_id: int, db: Session = Depends(get_db),
+                       current_user: User = Depends(require_director)):
+    """Принудительно завершает все активные сессии сотрудника на всех устройствах —
+    без удаления самой учётки. Нужно, если утёк логин-токен или человек ушёл в отпуск
+    с чужого/общего устройства, но продолжает работать: сам постоянный токен не
+    меняется, сотрудник просто должен будет войти заново."""
+    db.query(UserSession).filter(UserSession.user_id == user_id).delete()
+    db.commit()
+    return RedirectResponse(url="/director/users?success=logout_everywhere", status_code=303)
 
 
 @router.post("/user/delete/{user_id}")

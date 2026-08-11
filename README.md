@@ -336,6 +336,7 @@ python -m pytest
 | GET | `/director/users` | Список сотрудников |
 | POST | `/director/user/add` | Добавить сотрудника (роль — только из `ALLOWED_USER_ROLES`: Менеджер/Колорист/Директор) |
 | POST | `/director/user/delete/{user_id}` | Удалить сотрудника |
+| POST | `/director/user/logout-everywhere/{user_id}` | Завершить все сессии сотрудника на всех устройствах, без удаления учётки |
 | GET | `/director/shifts` | Журнал смен |
 | GET | `/director/shift/{shift_id}` | Детали смены |
 | GET | `/director/shifts/print` | Печатный отчёт по сменам |
@@ -358,6 +359,10 @@ python -m pytest
       закреплённого заказа другим колористом, произвольная смена статуса менеджером в обход
       фотоконтроля колориста.
 - [x] Миграции схемы через Alembic вместо ручных ALTER TABLE.
+- [x] Логин-токен сотрудника хранится хэшированным (bcrypt, `utils.hash_token`/`verify_token`),
+      а не открытым текстом; блокировка аккаунта на 15 минут после 5 неудачных попыток входа
+      подряд (`User.failed_login_attempts`/`locked_until`); директор может принудительно
+      разлогинить сотрудника на всех устройствах, не удаляя учётку (`/director/user/logout-everywhere/{id}`).
 - [ ] Тестовое покрытие (unit/integration) — начальный набор есть (см. [Тесты](#тесты)), не полное.
 - [ ] Docker-compose для локального поднятия PostgreSQL + приложения.
 - [ ] Экспорт финансовой аналитики (CSV/Excel).

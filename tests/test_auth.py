@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from models import UserSession
-from utils import utc_now
+from utils import utc_now, hash_token, LOGIN_MAX_ATTEMPTS
 from tests.factories import make_user, login_session
 
 
@@ -48,6 +48,69 @@ def test_login_wrong_token_rejected(client, db_session):
     assert resp.status_code == 200
     assert "Неверный логин" in resp.text
     assert "access_token" not in resp.cookies
+
+
+def test_legacy_plaintext_token_upgraded_to_hash_on_login(client, db_session):
+    """Сотрудники, заведённые до перехода на хэширование, хранят token открытым
+    текстом — при первом же успешном входе он должен смениться на token_hash,
+    а поле token обнулиться."""
+    user = make_user(db_session, role="Менеджер", token="legacy-plain-token")
+
+    resp = client.post("/login", data={"username": user.username, "token": "legacy-plain-token"},
+                        follow_redirects=False)
+    assert resp.status_code == 303
+
+    db_session.refresh(user)
+    assert user.token is None
+    assert user.token_hash is not None
+
+    # И повторный вход тем же токеном по-прежнему работает — уже через хэш.
+    resp2 = client.post("/login", data={"username": user.username, "token": "legacy-plain-token"},
+                         follow_redirects=False)
+    assert resp2.status_code == 303
+
+
+def test_login_hashed_token_accepted(client, db_session):
+    user = make_user(db_session, role="Менеджер", token=None)
+    user.token_hash = hash_token("my-secret-token")
+    db_session.commit()
+
+    resp = client.post("/login", data={"username": user.username, "token": "my-secret-token"},
+                        follow_redirects=False)
+    assert resp.status_code == 303
+
+
+def test_login_locks_account_after_max_failed_attempts(client, db_session):
+    user = make_user(db_session, role="Менеджер", token="correct-token")
+
+    for _ in range(LOGIN_MAX_ATTEMPTS):
+        resp = client.post("/login", data={"username": user.username, "token": "wrong"})
+        assert resp.status_code == 200
+
+    db_session.refresh(user)
+    assert user.locked_until is not None
+    assert user.locked_until > utc_now()
+
+    # Даже правильный токен не пускает, пока аккаунт заблокирован
+    resp = client.post("/login", data={"username": user.username, "token": "correct-token"})
+    assert resp.status_code == 200
+    assert "Слишком много" in resp.text
+    assert "access_token" not in resp.cookies
+
+
+def test_login_lockout_clears_after_successful_login(client, db_session):
+    user = make_user(db_session, role="Менеджер", token="correct-token")
+
+    for _ in range(LOGIN_MAX_ATTEMPTS - 1):
+        client.post("/login", data={"username": user.username, "token": "wrong"})
+
+    resp = client.post("/login", data={"username": user.username, "token": "correct-token"},
+                        follow_redirects=False)
+    assert resp.status_code == 303
+
+    db_session.refresh(user)
+    assert user.failed_login_attempts == 0
+    assert user.locked_until is None
 
 
 def test_expired_session_denies_access(client, db_session):

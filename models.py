@@ -24,8 +24,18 @@ class User(Base):
     role = Column(String)  # Менеджер, Колорист, Директор
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=True)  # Директору филиал не нужен
 
-    # Постоянный логин-токен сотрудника (аналог пароля, не меняется при входе)
+    # Постоянный логин-токен сотрудника хранится хэшированным (token_hash), не в
+    # открытом виде — утечка базы не должна означать утечку всех логинов разом.
+    # token остаётся только как переходное поле: у сотрудников, заведённых до
+    # хэширования, тут ещё лежит их токен открытым текстом; при первом же успешном
+    # входе login() досчитывает hash и обнуляет token — см. main.py.
     token = Column(String, unique=True, index=True, nullable=True)
+    token_hash = Column(String, nullable=True)
+
+    # Защита от подбора токена: после LOGIN_MAX_ATTEMPTS неудачных попыток подряд
+    # аккаунт временно блокируется (locked_until). Сбрасывается при успешном входе.
+    failed_login_attempts = Column(Integer, nullable=False, default=0, server_default="0")
+    locked_until = Column(DateTime, nullable=True)
 
     branch = relationship("Branch", back_populates="users")
 

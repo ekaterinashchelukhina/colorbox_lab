@@ -1,5 +1,5 @@
 """Регрессионные тесты на директорские роуты: авторизация, безопасное удаление."""
-from models import Branch, Shift, User
+from models import Branch, Shift, User, UserSession
 from routers.director import _apply_shift_filters
 from tests.factories import make_branch, make_user, make_client, make_order, login_session, error_text
 from utils import utc_now
@@ -33,6 +33,26 @@ def test_delete_user_with_orders_does_not_crash(client, db_session):
     # отличить от заказа, который вообще ещё никто не брал в работу (colorist_id
     # тоже None в обоих случаях).
     assert order.colorist_deleted_name == colorist.username
+
+
+def test_logout_everywhere_clears_sessions_without_deleting_user(client, db_session):
+    branch = make_branch(db_session)
+    director = make_user(db_session, role="Директор", branch=None)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    # Две "сессии" одного менеджера — как вход с телефона и с компьютера.
+    login_session(db_session, client, manager)
+    login_session(db_session, client, manager)
+    login_session(db_session, client, director)
+
+    assert db_session.query(UserSession).filter(UserSession.user_id == manager.id).count() == 2
+
+    resp = client.post(f"/director/user/logout-everywhere/{manager.id}", follow_redirects=False)
+    assert resp.status_code == 303
+    assert "success=logout_everywhere" in resp.headers["location"]
+
+    assert db_session.query(UserSession).filter(UserSession.user_id == manager.id).count() == 0
+    # Учётка остаётся — это разлогин, не удаление
+    assert db_session.query(User).filter(User.id == manager.id).first() is not None
 
 
 def test_cannot_delete_branch_with_dependents(client, db_session):
@@ -83,9 +103,13 @@ def test_new_user_login_survives_stray_whitespace_in_username(client, db_session
 
     stored = db_session.query(User).filter(User.username == "ivan").first()
     assert stored is not None
-    assert stored.token is not None
+    assert stored.token_hash is not None
 
-    login_resp = client.post("/login", data={"username": "ivan", "token": stored.token},
+    # Токен показывается один раз через флеш-куку — в базе лежит только его хэш.
+    plain_token = resp.cookies.get("flash_new_token")
+    assert plain_token is not None
+
+    login_resp = client.post("/login", data={"username": "ivan", "token": plain_token},
                              follow_redirects=False)
     assert login_resp.status_code == 303
     assert login_resp.headers["location"] != "/"
