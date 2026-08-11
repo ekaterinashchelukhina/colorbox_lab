@@ -3,8 +3,8 @@ import secrets
 from contextlib import asynccontextmanager
 from datetime import timedelta
 
-from fastapi import FastAPI, Request, Form, Depends, HTTPException
-from fastapi.responses import RedirectResponse, FileResponse
+from fastapi import FastAPI, Request, Form, Depends, HTTPException, Response
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -14,7 +14,7 @@ from database import get_db, sync_schema
 from models import User, Order, Shift, UserSession
 from utils import (templates, RedirectException, require_login, utc_now, user_has_role, CANCELLED_STATUS,
                     hash_token, verify_token, LOGIN_MAX_ATTEMPTS, LOGIN_LOCKOUT)
-from storage import UPLOAD_DIR
+from storage import storage
 
 SESSION_LIFETIME = timedelta(days=30)
 
@@ -62,15 +62,17 @@ def serve_uploaded_photo(filename: str, db: Session = Depends(get_db), user: Use
     сделано (директору — любое). Без этого голый StaticFiles-маунт на static/uploads/
     отдавал бы файл всем подряд по URL: имена файлов заказов детерминированы
     (order_{id}_{type}.jpg) с последовательным id — фото легко перебрать без логина.
+    Байты читаются через storage.open() — тот же интерфейс, что и при сохранении
+    (storage.py), так что этому роуту всё равно, локальный диск за ним или S3.
     """
     # {filename} у FastAPI и так не матчит "/" в пути, но на случай будущих изменений
-    # роута — явная страховка от выхода за пределы UPLOAD_DIR.
+    # роута — явная страховка от выхода за пределы каталога загрузок.
     filename = os.path.basename(filename)
     url = f"/static/uploads/{filename}"
 
     order = db.query(Order).filter(or_(*[col == url for col in _ORDER_PHOTO_COLUMNS])).first()
     if order and (user_has_role(user, "директор") or order.branch_id == user.branch_id):
-        return _file_response_or_404(filename)
+        return _photo_response_or_404(url)
 
     # Фото смены хранятся списком в одной JSON-колонке (Shift.start_photos/end_photos),
     # а не отдельным полем на файл — сравниваем подстрокой.
@@ -78,18 +80,20 @@ def serve_uploaded_photo(filename: str, db: Session = Depends(get_db), user: Use
         or_(Shift.start_photos.contains(filename), Shift.end_photos.contains(filename))
     ).first()
     if shift and (user_has_role(user, "директор") or shift.branch_id == user.branch_id):
-        return _file_response_or_404(filename)
+        return _photo_response_or_404(url)
 
     # И "файл ни на что не сослался", и "сослался, но из чужого филиала" — один и тот
     # же 404, чтобы не подтверждать чужаку сам факт существования файла.
     raise HTTPException(status_code=404)
 
 
-def _file_response_or_404(filename: str) -> FileResponse:
-    path = os.path.join(UPLOAD_DIR, filename)
-    if not os.path.isfile(path):
+def _photo_response_or_404(url: str) -> Response:
+    data = storage.open(url)
+    if data is None:
         raise HTTPException(status_code=404)
-    return FileResponse(path)
+    # Все фото сохраняются compress_and_save_image()-ом как JPEG (utils.py) —
+    # никакой другой content-type тут не появляется.
+    return Response(content=data, media_type="image/jpeg")
 
 # ==========================================
 # Базовые маршруты (вход и главная)
