@@ -208,12 +208,17 @@ def create_order(
     if service_type in PHOTO_REQUIRED_SERVICE_TYPES and (not file or not file.filename):
         return error_redirect("/new-order", "Отсутствует фото детали!")
 
-    client = _get_or_create_client(db, client_name, manager.branch_id)
+    # Проверяем дату до создания клиента — иначе на некорректном дедлайне в базе
+    # оставался бы клиент без единого заказа (_get_or_create_client уже отработал бы,
+    # а строка ниже упала бы). Naive UTC, как и все остальные DateTime-колонки (см.
+    # database.utc_now) — без этого сравнение с utc_now() в будущем (например, отчёт
+    # по просроченным заказам) упадёт с TypeError на смешивании naive/aware datetime.
+    try:
+        deadline_dt = datetime.strptime(deadline, "%Y-%m-%d").replace(hour=18, minute=0)
+    except ValueError:
+        return error_redirect("/new-order", "Некорректная дата дедлайна.")
 
-    # Naive UTC, как и все остальные DateTime-колонки (см. database.utc_now) — без этого
-    # сравнение с utc_now() в будущем (например, отчёт по просроченным заказам) упадёт
-    # с TypeError на смешивании naive/aware datetime.
-    deadline_dt = datetime.strptime(deadline, "%Y-%m-%d").replace(hour=18, minute=0)
+    client = _get_or_create_client(db, client_name, manager.branch_id)
     is_express = True if service_type == "Экспресс-подбор" else False
     clean_paint_code = paint_code.strip() if paint_code else ""
 

@@ -1,4 +1,4 @@
-from models import Order
+from models import Client, Order
 from tests.factories import make_branch, make_user, make_client, make_order, login_session, error_text
 
 
@@ -19,6 +19,23 @@ def test_create_order_requires_photo_for_podbor(client, db_session):
 
     assert "Отсутствует фото детали" in error_text(resp)
     assert db_session.query(Order).count() == 0
+
+
+def test_create_order_rejects_malformed_deadline(client, db_session):
+    branch = make_branch(db_session)
+    manager = make_user(db_session, role="Менеджер", branch=branch)
+    _start_manager_shift(client, db_session, manager)
+
+    resp = client.post("/new-order", data={
+        "client_name": "Клиент", "car": "Kia", "detail": "Крыло",
+        "service_type": "Слив по коду", "target_volume": "100", "deadline": "не дата",
+    })
+
+    assert "Некорректная дата" in error_text(resp)
+    assert db_session.query(Order).count() == 0
+    # Проверка даты — до создания клиента, иначе на битой дате в базе оставался бы
+    # клиент без единого заказа.
+    assert db_session.query(Client).filter(Client.name == "Клиент").count() == 0
 
 
 def test_create_order_slив_po_kodu_no_photo_required(client, db_session):
