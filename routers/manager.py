@@ -3,7 +3,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Request, Form, Depends, UploadFile, File
 from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
 from models import Order, Client, User, Branch, Shift
@@ -96,7 +96,11 @@ def _require_manager_or_director(user: User) -> Optional[RedirectResponse]:
 def _filtered_archive_query(db: Session, user: User, branch_id: Optional[str],
                             colorist_id: Optional[str], date_from: Optional[str], date_to: Optional[str],
                             service_type: Optional[str] = None):
-    query = db.query(Order).filter(Order.status.in_(["Выдано", CANCELLED_STATUS]))
+    # joinedload — archive.html/print_archive.html читают order.client.name и
+    # order.colorist.username на каждой строке; без него это N+1 к базе на странице архива.
+    query = db.query(Order).options(joinedload(Order.client), joinedload(Order.colorist)).filter(
+        Order.status.in_(["Выдано", CANCELLED_STATUS])
+    )
     query = scope_query_to_branch(query, Order, user, branch_id)
 
     colorist_id = parse_optional_id(colorist_id)

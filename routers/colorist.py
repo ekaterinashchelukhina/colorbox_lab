@@ -4,7 +4,7 @@ from typing import List
 from fastapi import APIRouter, Request, Depends, UploadFile, File
 from fastapi.responses import RedirectResponse
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
 from models import Order, Shift, User
@@ -27,7 +27,9 @@ def colorist_dashboard(request: Request, db: Session = Depends(get_db)):
     active_shift = db.query(Shift).filter(Shift.user_id == user.id, Shift.end_time == None).first()
     orders = []
     if active_shift:
-        orders = db.query(Order).filter(
+        # joinedload — colorist_dashboard.html читает order.client.name на каждой строке
+        # очереди; без него это N+1 к базе на каждое открытие /colorist.
+        orders = db.query(Order).options(joinedload(Order.client)).filter(
             Order.branch_id == user.branch_id,
             Order.status.in_(["В очереди", "В работе"]),
             # Свежий заказ (colorist_id ещё не назначен) виден всем колористам филиала —

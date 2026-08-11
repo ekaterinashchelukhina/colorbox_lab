@@ -59,7 +59,9 @@ class Client(Base):
     __tablename__ = "clients"
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, index=True)
-    branch_id = Column(Integer, ForeignKey("branches.id"))
+    # Индекс — почти любой запрос к клиентам идёт через scope_query_to_branch
+    # (фильтр по branch_id), см. models.py:Order.branch_id ниже про то же самое.
+    branch_id = Column(Integer, ForeignKey("branches.id"), index=True)
 
     branch = relationship("Branch", back_populates="clients")
     orders = relationship("Order", back_populates="client", cascade="all, delete-orphan")
@@ -69,10 +71,14 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(Integer, primary_key=True, index=True)
-    branch_id = Column(Integer, ForeignKey("branches.id"))
+    # branch_id/status/colorist_id/manager_id — колонки, по которым фильтрует
+    # практически каждый запрос к заказам (изоляция по филиалу, очередь колориста,
+    # архив, дашборд менеджера/директора) — без индекса это full scan таблицы orders
+    # на каждый такой запрос.
+    branch_id = Column(Integer, ForeignKey("branches.id"), index=True)
     client_id = Column(Integer, ForeignKey("clients.id"))
-    manager_id = Column(Integer, ForeignKey("users.id"))
-    colorist_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    manager_id = Column(Integer, ForeignKey("users.id"), index=True)
+    colorist_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
 
     car = Column(String)
     detail = Column(String)
@@ -81,7 +87,7 @@ class Order(Base):
     service_type = Column(String)
     target_volume = Column(Float)
     actual_volume = Column(Float, nullable=True)
-    status = Column(String, default="В очереди")
+    status = Column(String, default="В очереди", index=True)
     is_express = Column(Boolean, default=False)
     rework_count = Column(Integer, default=0)
     price = Column(Float, default=0.0)
@@ -124,7 +130,7 @@ class Shift(Base):
     __tablename__ = "shifts"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    branch_id = Column(Integer, ForeignKey("branches.id"))
+    branch_id = Column(Integer, ForeignKey("branches.id"), index=True)
 
     start_time = Column(DateTime, default=utc_now)
     start_photos = Column(String, nullable=True)  # Ссылки на утренние фото через запятую

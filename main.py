@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request, Form, Depends, HTTPException, Response
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 # Импорты базы данных и утилит
 from database import get_db, sync_schema
@@ -193,7 +193,9 @@ def dashboard(request: Request, db: Session = Depends(get_db), user: User = Depe
     if user_has_role(user, "директор"):
         return RedirectResponse(url="/director", status_code=303)
 
-    orders = db.query(Order).filter(
+    # joinedload — dashboard.html обращается к order.client.name и order.colorist.username
+    # для каждой строки; без этого ленивая подгрузка связей даёт по 2 доп. запроса на заказ.
+    orders = db.query(Order).options(joinedload(Order.client), joinedload(Order.colorist)).filter(
         Order.branch_id == user.branch_id, Order.status.notin_(["Выдано", CANCELLED_STATUS])
     ).order_by(Order.created_at.desc()).all()
 

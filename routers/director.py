@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Request, Form, Depends
 from fastapi.responses import RedirectResponse
 from sqlalchemy import and_, case, func, not_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, contains_eager
 
 from database import get_db
 from models import Order, User, Branch, Shift, Client, UserSession
@@ -32,7 +32,10 @@ def _active_orders_query(db: Session, user: User, branch_id: Optional[str]):
     """Базовый запрос "активных" заказов филиала (или всех филиалов для директора):
     ещё не выданных или выданных, но не оплаченных; отменённые сюда не попадают —
     они уходят в архив. Возвращает (query, current_branch)."""
-    query = db.query(Order).order_by(Order.created_at.desc())
+    # joinedload — director_dashboard.html/director_orders.html читают order.client.name
+    # и order.colorist.username на каждой строке; без него это N+1 к базе на списке заказов.
+    query = db.query(Order).options(joinedload(Order.client), joinedload(Order.colorist)) \
+        .order_by(Order.created_at.desc())
     query = scope_query_to_branch(query, Order, user, branch_id)
     query = query.filter(
         Order.status != CANCELLED_STATUS,
@@ -46,7 +49,10 @@ def _active_orders_query(db: Session, user: User, branch_id: Optional[str]):
 
 def _director_dashboard_stats(db: Session, user: User, branch_id: Optional[str]):
     query, current_branch = _active_orders_query(db, user, branch_id)
-    shifts_query = db.query(Shift).join(User).filter(Shift.end_time == None).order_by(Shift.start_time.desc())
+    # contains_eager, не joinedload — User здесь уже присоединён через .join(User) для
+    # фильтра ниже, второй join через joinedload только продублировал бы его.
+    shifts_query = db.query(Shift).join(User).options(contains_eager(Shift.user)) \
+        .filter(Shift.end_time == None).order_by(Shift.start_time.desc())
     shifts_query = scope_query_to_branch(shifts_query, Shift, user, branch_id)
 
     b_id = parse_optional_id(branch_id)
@@ -142,7 +148,7 @@ def print_shifts_report(request: Request, branch_id: Optional[str] = None, color
     c_id = parse_optional_id(colorist_id)
 
     # Отчёт только по колористам — смены менеджеров сюда не попадают
-    shifts_query = db.query(Shift).join(User).filter(
+    shifts_query = db.query(Shift).join(User).options(contains_eager(Shift.user)).filter(
         Shift.end_time != None, User.role == "Колорист"
     ).order_by(Shift.start_time.desc())
     shifts_query = _apply_shift_filters(shifts_query, user, b_id, c_id, date_from, date_to)
@@ -262,7 +268,7 @@ def director_shifts_list(request: Request, branch_id: Optional[str] = None, colo
     """Список всех смен для директора"""
     branches = db.query(Branch).all()
     # Отчёт только по колористам — смены менеджеров сюда не попадают
-    query = db.query(Shift).join(User).filter(
+    query = db.query(Shift).join(User).options(contains_eager(Shift.user)).filter(
         Shift.end_time != None, User.role == "Колорист"
     ).order_by(Shift.start_time.desc())
 
