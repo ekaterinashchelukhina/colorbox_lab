@@ -2,9 +2,11 @@
 читала байты прямо с диска, теперь идёт через storage.open(); эти тесты проверяют,
 что поведение (изоляция по филиалу, 404 на чужое/несуществующее) не изменилось."""
 import io
+import json
 
 from PIL import Image
 
+from models import Shift
 from tests.factories import make_branch, make_client, make_order, make_user, login_session
 
 
@@ -61,4 +63,45 @@ def test_unknown_photo_url_returns_404(client, db_session):
     login_session(db_session, client, manager)
 
     resp = client.get("/static/uploads/never-existed.jpg")
+    assert resp.status_code == 404
+
+
+def test_own_branch_can_view_shift_photo(client, db_session):
+    branch = make_branch(db_session)
+    colorist = make_user(db_session, role="Колорист", branch=branch)
+    login_session(db_session, client, colorist)
+
+    resp = client.post(
+        "/shift/start",
+        files={"photos": ("start.jpg", io.BytesIO(_fake_jpeg_bytes()), "image/jpeg")},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+
+    shift = db_session.query(Shift).filter(Shift.user_id == colorist.id).one()
+    photo_url = json.loads(shift.start_photos)[0]
+
+    resp = client.get(photo_url)
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "image/jpeg"
+
+
+def test_other_branch_cannot_view_shift_photo(client, db_session):
+    branch_a = make_branch(db_session)
+    branch_b = make_branch(db_session)
+    colorist_a = make_user(db_session, role="Колорист", branch=branch_a)
+    colorist_b = make_user(db_session, role="Колорист", branch=branch_b)
+
+    login_session(db_session, client, colorist_a)
+    resp = client.post(
+        "/shift/start",
+        files={"photos": ("start.jpg", io.BytesIO(_fake_jpeg_bytes()), "image/jpeg")},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+    shift = db_session.query(Shift).filter(Shift.user_id == colorist_a.id).one()
+    photo_url = json.loads(shift.start_photos)[0]
+
+    login_session(db_session, client, colorist_b)
+    resp = client.get(photo_url)
     assert resp.status_code == 404

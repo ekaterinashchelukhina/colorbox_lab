@@ -129,7 +129,10 @@ class Order(Base):
 class Shift(Base):
     __tablename__ = "shifts"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    # index=True — serve_uploaded_photo (main.py) фильтрует смены по user_id, чтобы
+    # сузить перебор до фото смен этого сотрудника, прежде чем искать имя файла
+    # внутри start_photos/end_photos.
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), index=True)
 
     start_time = Column(DateTime, default=utc_now)

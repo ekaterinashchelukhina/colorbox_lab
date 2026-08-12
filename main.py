@@ -1,4 +1,5 @@
 import os
+import re
 import secrets
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -49,11 +50,20 @@ def redirect_exception_handler(request: Request, exc: RedirectException):
     return RedirectResponse(url=exc.url, status_code=303)
 
 
-# Колонки заказа, где может лежать URL вида "/static/uploads/<filename>".
-_ORDER_PHOTO_COLUMNS = [
-    Order.photo_detail, Order.photo_scales, Order.photo_after, Order.recipe_photo,
-    Order.rework_photo_scales, Order.rework_photo_after, Order.rework_photo_test,
+# Атрибуты заказа, где может лежать URL вида "/static/uploads/<filename>".
+_ORDER_PHOTO_ATTRS = [
+    "photo_detail", "photo_scales", "photo_after", "recipe_photo",
+    "rework_photo_scales", "rework_photo_after", "rework_photo_test",
 ]
+
+# Оба вида имён файлов детерминированы (save_order_photo/save_uploaded_photos в
+# utils.py) и содержат id, по которому можно найти запись напрямую — id заказа для
+# фото заказа ("order_{id}_{тип}.jpg"), id сотрудника для фото смены
+# ("{user_id}_{tag}_{timestamp}.jpg"). Это позволяет искать точечно по индексу вместо
+# перебора всей таблицы orders/shifts на каждый показ фото — а фото грузятся на
+# каждой карточке заказа, то есть это самый частый запрос в системе.
+_ORDER_PHOTO_FILENAME_RE = re.compile(r"^order_(\d+)_")
+_SHIFT_PHOTO_FILENAME_RE = re.compile(r"^(\d+)_")
 
 
 @app.get("/static/uploads/{filename}")
@@ -70,17 +80,28 @@ def serve_uploaded_photo(filename: str, db: Session = Depends(get_db), user: Use
     filename = os.path.basename(filename)
     url = f"/static/uploads/{filename}"
 
-    order = db.query(Order).filter(or_(*[col == url for col in _ORDER_PHOTO_COLUMNS])).first()
-    if order and (user_has_role(user, "директор") or order.branch_id == user.branch_id):
-        return _photo_response_or_404(url)
+    order_match = _ORDER_PHOTO_FILENAME_RE.match(filename)
+    if order_match:
+        order = db.get(Order, int(order_match.group(1)))
+        # url in (...) — подтверждаем, что это реально текущее фото этого заказа (не
+        # заменённое с тех пор фото того же типа), прежде чем отдавать байты.
+        if order and url in (getattr(order, attr) for attr in _ORDER_PHOTO_ATTRS):
+            if user_has_role(user, "директор") or order.branch_id == user.branch_id:
+                return _photo_response_or_404(url)
+        raise HTTPException(status_code=404)
 
-    # Фото смены хранятся списком в одной JSON-колонке (Shift.start_photos/end_photos),
-    # а не отдельным полем на файл — сравниваем подстрокой.
-    shift = db.query(Shift).filter(
-        or_(Shift.start_photos.contains(filename), Shift.end_photos.contains(filename))
-    ).first()
-    if shift and (user_has_role(user, "директор") or shift.branch_id == user.branch_id):
-        return _photo_response_or_404(url)
+    shift_match = _SHIFT_PHOTO_FILENAME_RE.match(filename)
+    if shift_match:
+        # Фото смены хранятся списком в одной JSON-колонке (Shift.start_photos/
+        # end_photos), а не отдельным полем на файл — сравниваем подстрокой, но
+        # только среди смен этого сотрудника (id из имени файла, Shift.user_id
+        # индексирован), а не по всей таблице shifts.
+        shift = db.query(Shift).filter(
+            Shift.user_id == int(shift_match.group(1)),
+            or_(Shift.start_photos.contains(filename), Shift.end_photos.contains(filename)),
+        ).first()
+        if shift and (user_has_role(user, "директор") or shift.branch_id == user.branch_id):
+            return _photo_response_or_404(url)
 
     # И "файл ни на что не сослался", и "сослался, но из чужого филиала" — один и тот
     # же 404, чтобы не подтверждать чужаку сам факт существования файла.
