@@ -202,10 +202,12 @@ npm run watch:css      # пересборка при изменении шабл
    затем `sudo systemctl enable --now colorbox`.
 5. Бэкапы БД: `sudo cp deploy/colorbox-backup.{service,timer} /etc/systemd/system/`,
    `sudo systemctl enable --now colorbox-backup.timer`. Дампы — в `/var/backups/colorbox`,
-   хранятся 14 дней. Это защищает от случайного `DROP`/неудачной миграции, но **не** от
-   потери самого сервера — дампы лежат на той же машине. Пока фото и БД не переехали на
-   S3/managed-хранилище, стоит хотя бы вручную периодически копировать `/var/backups/colorbox`
-   куда-то ещё.
+   хранятся 14 дней. Если сервису заданы `S3_BUCKET`/ключи (см. [Конфигурацию](#конфигурация)),
+   `deploy/backup_db.sh` дополнительно заливает каждый дамп в тот же S3-бакет, что и фото
+   (папка `db-backups/`, там своя ротация на те же 14 дней) — это и есть выгрузка архива за
+   пределы сервера, без неё локальный дамп не защищает от потери самого сервера (диск умер,
+   VPS снесли). Без настроенного S3 заливка сама себя пропускает, падает только локальная
+   часть.
 6. nginx: `sudo cp deploy/nginx.conf /etc/nginx/sites-available/colorbox`, поправить
    `YOUR_DOMAIN` и пути, `ln -s` в `sites-enabled`, `nginx -t && systemctl reload nginx`.
    Затем `certbot --nginx -d YOUR_DOMAIN` — сам допишет HTTPS и автопродление.
